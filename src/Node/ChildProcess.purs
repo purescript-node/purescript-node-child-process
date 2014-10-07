@@ -1,11 +1,11 @@
 module Node.ChildProcess where
 
+  import Control.Events (Event(..), EventEmitter)
   import Control.Monad.Eff (Eff())
 
   import Data.Function (Fn0(), Fn1(), Fn2())
 
   import Node.ChildProcess.Signal (Signal(..))
-  import Node.Events (Event(..), EventEmitter)
 
   foreign import data Handle :: *
   foreign import data Spawn :: !

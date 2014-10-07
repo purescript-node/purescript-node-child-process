@@ -4,6 +4,6 @@
   "description": "PureScript bindings to child_process.",
   "license": "MIT",
   "dependencies": {
-    "purescript-node-events": "~0.0.5"
+    "purescript-events": "joneshf/purescript-events#~0.1.2"
   }
 }
