@@ -1,6 +1,6 @@
 {
   "name": "purescript-node-child-process",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "PureScript bindings to child_process.",
   "license": "MIT",
   "dependencies": {
