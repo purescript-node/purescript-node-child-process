@@ -1,5 +1,5 @@
 module Node.ChildProcess.Signal
-  ( Signal()
+  ( Signal(..)
   , sigabrt
   , sigalrm
   , sigbus
@@ -39,6 +39,8 @@ module Node.ChildProcess.Signal
   , sigxcpu
   , sigxfsz
   ) where
+
+  import Prelude (Show)
 
   newtype Signal = Signal String
 
