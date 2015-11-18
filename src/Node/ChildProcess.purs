@@ -1,83 +1,98 @@
-module Node.ChildProcess where
+module Node.ChildProcess
+  ( Handle()
+  , Spawn()
+  , Stdin()
+  , Stdout()
+  , Stderr()
+  , ChildProcess()
+  , SpawnOptions()
+  , ChildProcessError()
+  , onExit
+  , onClose
+  , onDisconnect
+  , onMessage
+  , onError
+  , spawn
+  , defaultSpawnOptions
+  ) where
 
-  import Control.Events (Event(..), EventEmitter)
-  import Control.Monad.Eff (Eff())
+import Prelude
 
-  import Data.Function (Fn0(), Fn1(), Fn2())
+import Control.Monad.Eff (Eff())
 
-  import Node.ChildProcess.Signal (Signal(..))
+import Data.Function (Fn0(), Fn1(), Fn2())
+import Data.Maybe (Maybe(..))
+import Data.Foreign (Foreign())
 
-  foreign import data Handle :: *
-  foreign import data Spawn :: !
-  foreign import data Stream :: ! -> *
-  foreign import data Stderr :: !
-  foreign import data Stdin :: !
-  foreign import data Stdout :: !
+import Node.Stream (Readable(), Writable())
+import Node.ChildProcess.Signal (Signal(..))
 
-  newtype ChildProcess = ChildProcess ChildProcessRec
+foreign import data Handle :: *
+foreign import data Spawn :: !
+foreign import data Stdin :: !
+foreign import data Stdout :: !
+foreign import data Stderr :: !
 
-  type ChildProcessRec =
-    { stderr     :: Stream Stderr
-    , stdin      :: Stream Stdin
-    , stdout     :: Stream Stdout
-    , pid        :: Number
-    , connected  :: Boolean
-    , kill       :: forall eff. Fn1 Signal Boolean
-    , send       :: forall eff r. Fn2 { | r} Handle (Eff eff Unit)
-    , disconnect :: forall eff. Fn0 (Eff eff Unit)
-    }
+type ChildProcess =
+  { stderr     :: forall eff. Readable () (stderr :: Stderr | eff) String
+  , stdin      :: forall eff. Writable () (stdin :: Stdin | eff) String
+  , stdout     :: forall eff. Readable  () (stdout :: Stdout | eff) String
+  , pid        :: Number
+  , connected  :: Boolean
+  , kill       :: forall eff. Fn1 Signal Boolean
+  , send       :: forall eff r. Fn2 { | r} Handle (Eff eff Unit)
+  , disconnect :: forall eff. Fn0 (Eff eff Unit)
+  }
 
-  type SpawnOptions =
-    { cwd       :: String
-    , stdio     :: [String]
-    , env       :: forall r. { | r}
-    , detached  :: Boolean
-    , uid       :: Number
-    , gid       :: Number
-    }
+type SpawnOptions =
+  { cwd       :: String
+  , stdio     :: Array String
+  , env       :: forall r. { | r}
+  , detached  :: Boolean
+  , uid       :: Number
+  , gid       :: Number
+  }
 
-  instance eventEmitterStreamStderr :: EventEmitter (Stream Stderr)
-  instance eventEmitterStreamStdin  :: EventEmitter (Stream Stdin)
-  instance eventEmitterStreamStdout :: EventEmitter (Stream Stdout)
+onExit :: forall eff. ChildProcess -> (Maybe Number -> Maybe Signal -> Eff eff Unit) -> Eff eff Unit
+onExit = mkOnExit Nothing Just Signal
 
-  instance eventEmitterChildProcess :: EventEmitter ChildProcess
+onClose :: forall eff. ChildProcess -> (Maybe Number -> Maybe Signal -> Eff eff Unit) -> Eff eff Unit
+onClose = mkOnClose Nothing Just Signal
 
-  closeEvent :: Event
-  closeEvent = Event "close"
+onMessage :: forall eff.  ChildProcess -> (Foreign -> Maybe Handle -> Eff eff Unit) -> Eff eff Unit
+onMessage = mkOnMessage Nothing Just
 
-  disconnectEvent :: Event
-  disconnectEvent = Event "disconnect"
+foreign import onDisconnect :: forall eff. ChildProcess -> Eff eff Unit -> Eff eff Unit
+foreign import onError :: forall eff. ChildProcess -> (ChildProcessError -> Eff eff Unit) -> Eff eff Unit
 
-  errorEvent :: Event
-  errorEvent = Event "error"
+foreign import spawn :: forall eff. String -> Array String -> SpawnOptions -> Eff (spawn :: Spawn | eff) ChildProcess
 
-  exitEvent :: Event
-  exitEvent = Event "exit"
+defaultSpawnOptions :: SpawnOptions
+defaultSpawnOptions =
+  { cwd: undefined
+  , stdio: ["pipe", "pipe", "pipe"]
+  , env: process.env
+  , detached: false
+  , uid: undefined
+  , gid: undefined
+  }
 
-  messageEvent :: Event
-  messageEvent = Event "message"
+type ChildProcessError = 
+  { code :: String
+  , errno :: String
+  , syscall :: String
+  }
 
-  foreign import spawn
-    "function spawn(command) {\
-    \  return function(args) {\
-    \    return function(opts) {\
-    \      return function() {\
-    \        return require('child_process').spawn(command, args, opts);\
-    \      }\
-    \    }\
-    \  }\
-    \}" :: forall eff. String -> [String] -> SpawnOptions -> Eff (spawn :: Spawn | eff) ChildProcess
+foreign import mkOnExit :: forall a eff.
+          Maybe a -> (a -> Maybe a) -> (String -> Signal) ->
+          ChildProcess -> (Maybe Number -> Maybe Signal -> Eff eff Unit) -> Eff eff Unit
+foreign import mkOnMessage :: forall a eff. 
+          Maybe a -> (a -> Maybe a) -> 
+          ChildProcess -> (Foreign -> Maybe Handle -> Eff eff Unit) -> Eff eff Unit
+foreign import mkOnClose :: forall a eff.
+          Maybe a -> (a -> Maybe a) -> (String -> Signal) ->
+          ChildProcess -> (Maybe Number -> Maybe Signal -> Eff eff Unit) -> Eff eff Unit
 
-  defaultSpawnOptions :: SpawnOptions
-  defaultSpawnOptions =
-    { cwd: undefined
-    , stdio: ["pipe", "pipe", "pipe"]
-    , env: process.env
-    , detached: false
-    , uid: undefined
-    , gid: undefined
-    }
-
-  -- There's gotta be a better way.
-  foreign import undefined :: forall a. a
-  foreign import process :: forall r. {env :: { | r}}
+-- There's gotta be a better way.
+foreign import undefined :: forall a. a
+foreign import process :: forall r. {env :: { | r}}
