@@ -13,8 +13,6 @@ import Node.Stream (onData)
 
 main = do
   ls <- spawn "ls" ["-la"] defaultSpawnOptions
-  onClose ls \code sig ->
-      log $ "ls exited with code: " ++ (show code) ++ "\nfrom signal: " ++ (show sig)
+  onExit ls \exit ->
+      log $ "ls exited: " <> show exit
   onData (stdout ls) (Buffer.toString UTF8 >=> log)
-  kill sigterm ls
-  log "Killed."

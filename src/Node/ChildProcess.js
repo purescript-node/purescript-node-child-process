@@ -12,32 +12,24 @@ exports.spawnImpl = function spawnImpl(command) {
     };
   };
 };
-exports.mkOnExit = function mkOnExit(nothing){
-  return function(just){
-    return function(signalConstr){
-      return function onExit(cp){
-        return function(cb){
-          return function(){
-            cp.on("exit", function(code, signal){
-              cb(code ? just(code) : nothing, signal ? just(signalConstr(signal)) : nothing);
-            });
-          };
-        };
+exports.mkOnExit = function mkOnExit(mkChildExit){
+  return function onExit(cp){
+    return function(cb){
+      return function(){
+        cp.on("exit", function(code, signal){
+          cb(mkChildExit(code)(signal))();
+        });
       };
     };
   };
 };
-exports.mkOnClose = function mkOnClose(nothing){
-  return function(just){
-    return function(signalConstr){
-      return function onClose(cp){
-        return function(cb){
-          return function(){
-            cp.on("close", function(code, signal){
-              cb(code ? just(code) : nothing, signal ? just(signalConstr(signal)) : nothing);
-            });
-          };
-        };
+exports.mkOnClose = function mkOnClose(mkChildExit){
+  return function onClose(cp){
+    return function(cb){
+      return function(){
+        cp.on("exit", function(code, signal){
+          cb(mkChildExit(code)(signal))();
+        });
       };
     };
   };
