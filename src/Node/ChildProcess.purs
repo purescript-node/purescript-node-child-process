@@ -41,7 +41,7 @@ import Unsafe.Coerce (unsafeCoerce)
 import Node.FS as FS
 import Node.Buffer (Buffer())
 import Node.Stream (Readable(), Writable(), Stream())
-import Node.ChildProcess.Signal (Signal(..))
+import Node.ChildProcess.Signal (Signal())
 
 -- | A handle for inter-process communication (IPC).
 foreign import data Handle :: *
