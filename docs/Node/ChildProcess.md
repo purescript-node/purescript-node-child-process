@@ -6,52 +6,102 @@
 data Handle :: *
 ```
 
-#### `Spawn`
+A handle for inter-process communication (IPC).
+
+#### `CHILD_PROCESS`
 
 ``` purescript
-data Spawn :: !
+data CHILD_PROCESS :: !
 ```
 
-#### `Stdin`
-
-``` purescript
-data Stdin :: !
-```
-
-#### `Stdout`
-
-``` purescript
-data Stdout :: !
-```
-
-#### `Stderr`
-
-``` purescript
-data Stderr :: !
-```
+The effect for creating and interacting with child processes.
 
 #### `ChildProcess`
 
 ``` purescript
-type ChildProcess = { stderr :: forall eff. Readable () (stderr :: Stderr | eff) String, stdin :: forall eff. Writable () (stdin :: Stdin | eff) String, stdout :: forall eff. Readable () (stdout :: Stdout | eff) String, pid :: Number, connected :: Boolean, kill :: forall eff. Fn1 Signal Boolean, send :: forall eff r. Fn2 {  | r } Handle (Eff eff Unit), disconnect :: forall eff. Fn0 (Eff eff Unit) }
+newtype ChildProcess
 ```
+
+#### `stderr`
+
+``` purescript
+stderr :: forall eff. ChildProcess -> Readable () (cp :: CHILD_PROCESS | eff) Buffer
+```
+
+The standard error stream of a child process. Note that this is only
+available if the process was spawned with the stderr option set to "pipe".
+
+#### `stdout`
+
+``` purescript
+stdout :: forall eff. ChildProcess -> Readable () (cp :: CHILD_PROCESS | eff) Buffer
+```
+
+The standard output stream of a child process. Note that this is only
+available if the process was spawned with the stdout option set to "pipe".
+
+#### `stdin`
+
+``` purescript
+stdin :: forall eff. ChildProcess -> Writable () (cp :: CHILD_PROCESS | eff) Buffer
+```
+
+The standard input stream of a child process. Note that this is only
+available if the process was spawned with the stdin option set to "pipe".
+
+#### `pid`
+
+``` purescript
+pid :: ChildProcess -> Int
+```
+
+The process ID of a child process. Note that if the process has already
+exited, another process may have taken the same ID, so be careful!
+
+#### `connected`
+
+``` purescript
+connected :: forall eff. ChildProcess -> Eff (cp :: CHILD_PROCESS | eff) Boolean
+```
+
+#### `send`
+
+``` purescript
+send :: forall eff props. {  | props } -> Handle -> ChildProcess -> Eff (cp :: CHILD_PROCESS | eff) Boolean
+```
+
+#### `disconnect`
+
+``` purescript
+disconnect :: forall eff. ChildProcess -> Eff (cp :: CHILD_PROCESS | eff) Unit
+```
+
+#### `kill`
+
+``` purescript
+kill :: forall eff. Signal -> ChildProcess -> Eff (cp :: CHILD_PROCESS | eff) Boolean
+```
+
+Send a signal to a child process. It's an unfortunate historical decision
+that this function is called "kill", as sending a signal to a child
+process won't necessarily kill it.
 
 #### `SpawnOptions`
 
 ``` purescript
-type SpawnOptions = { cwd :: String, stdio :: Array String, env :: forall r. {  | r }, detached :: Boolean, uid :: Number, gid :: Number }
+type SpawnOptions = { cwd :: String, stdio :: Array String, env :: Nullable (StrMap String), detached :: Boolean, uid :: Int, gid :: Int }
 ```
 
 #### `onExit`
 
 ``` purescript
-onExit :: forall eff. ChildProcess -> (Maybe Number -> Maybe Signal -> Eff eff Unit) -> Eff eff Unit
+onExit :: forall eff. ChildProcess -> (Maybe Int -> Maybe Signal -> Eff eff Unit) -> Eff eff Unit
 ```
 
 #### `onClose`
 
 ``` purescript
-onClose :: forall eff. ChildProcess -> (Maybe Number -> Maybe Signal -> Eff eff Unit) -> Eff eff Unit
+onClose :: forall eff. ChildProcess -> (Maybe Int -> Maybe Signal -> Eff eff Unit) -> Eff eff Unit
 ```
 
 #### `onMessage`
@@ -75,7 +125,7 @@ onError :: forall eff. ChildProcess -> (ChildProcessError -> Eff eff Unit) -> Ef
 #### `spawn`
 
 ``` purescript
-spawn :: forall eff. String -> Array String -> SpawnOptions -> Eff (spawn :: Spawn | eff) ChildProcess
+spawn :: forall eff. String -> Array String -> SpawnOptions -> Eff (cp :: CHILD_PROCESS | eff) ChildProcess
 ```
 
 #### `defaultSpawnOptions`
