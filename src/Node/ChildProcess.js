@@ -3,6 +3,15 @@
 // module Node.ChildProcess
 /* eslint-env node*/
 
+exports.unsafeFromNullable = function unsafeFromNullable(msg){
+  return function(x) {
+    if (x === null) {
+      throw new Error(msg);
+    } else {
+      return x;
+    };
+  };
+};
 exports.spawnImpl = function spawnImpl(command) {
   return function(args) {
     return function(opts) {

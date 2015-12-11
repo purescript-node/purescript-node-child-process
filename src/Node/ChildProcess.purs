@@ -57,9 +57,9 @@ runChildProcess (ChildProcess r) = r
 -- | Note: some of these types are lies, and so it is unsafe to access some of
 -- | these record fields directly.
 type ChildProcessRec =
-  { stderr     :: forall eff. Readable () (cp :: CHILD_PROCESS | eff) Buffer
-  , stdin      :: forall eff. Writable () (cp :: CHILD_PROCESS | eff) Buffer
-  , stdout     :: forall eff. Readable () (cp :: CHILD_PROCESS | eff) Buffer
+  { stdin      :: forall eff. Nullable (Writable () (cp :: CHILD_PROCESS | eff) Buffer)
+  , stdout     :: forall eff. Nullable (Readable () (cp :: CHILD_PROCESS | eff) Buffer)
+  , stderr     :: forall eff. Nullable (Readable () (cp :: CHILD_PROCESS | eff) Buffer)
   , pid        :: Int
   , connected  :: Boolean
   , kill       :: Signal -> Boolean
@@ -67,20 +67,28 @@ type ChildProcessRec =
   , disconnect :: forall eff. Eff eff Unit
   }
 
--- | The standard error stream of a child process. Note that this is only
--- | available if the process was spawned with the stderr option set to "pipe".
-stderr :: forall eff. ChildProcess -> Readable () (cp :: CHILD_PROCESS | eff) Buffer
-stderr = _.stderr <<< runChildProcess
+-- | The standard input stream of a child process. Note that this is only
+-- | available if the process was spawned with the stdin option set to "pipe".
+stdin :: forall eff. ChildProcess -> Writable () (cp :: CHILD_PROCESS | eff) Buffer
+stdin = unsafeFromNullable (missingStream "stdin") <<< _.stdin <<< runChildProcess
 
 -- | The standard output stream of a child process. Note that this is only
 -- | available if the process was spawned with the stdout option set to "pipe".
 stdout :: forall eff. ChildProcess -> Readable () (cp :: CHILD_PROCESS | eff) Buffer
-stdout = _.stdout <<< runChildProcess
+stdout = unsafeFromNullable (missingStream "stdout") <<< _.stdout <<< runChildProcess
 
--- | The standard input stream of a child process. Note that this is only
--- | available if the process was spawned with the stdin option set to "pipe".
-stdin :: forall eff. ChildProcess -> Writable () (cp :: CHILD_PROCESS | eff) Buffer
-stdin = _.stdin <<< runChildProcess
+-- | The standard error stream of a child process. Note that this is only
+-- | available if the process was spawned with the stderr option set to "pipe".
+stderr :: forall eff. ChildProcess -> Readable () (cp :: CHILD_PROCESS| eff) Buffer
+stderr = unsafeFromNullable (missingStream "stderr") <<< _.stderr <<< runChildProcess
+
+missingStream :: String -> String
+missingStream str =
+  "Node.ChildProcess: stream not available: " <> str <> "\nThis is probably "
+  <> "because you passed something other than Pipe to the stdio option when "
+  <> "you spawned it."
+
+foreign import unsafeFromNullable :: forall a. String -> Nullable a -> a
 
 -- | The process ID of a child process. Note that if the process has already
 -- | exited, another process may have taken the same ID, so be careful!
