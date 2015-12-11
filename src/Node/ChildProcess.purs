@@ -11,7 +11,7 @@ module Node.ChildProcess
   , send
   , disconnect
   , ChildProcessError()
-  , ChildProcessExit()
+  , ChildProcessExit(..)
   , onExit
   , onClose
   , onDisconnect
