@@ -4,9 +4,9 @@
   "description": "PureScript bindings to child_process.",
   "license": "MIT",
   "dependencies": {
-    "purescript-functions": "~0.1.0-rc.1",
-    "purescript-node-streams": "~0.1.3",
-    "purescript-foreign": "~0.7.0"
+    "purescript-functions": "~0.1.0",
+    "purescript-node-streams": "~0.2.0",
+    "purescript-foreign": "~0.7.2"
   },
   "devDependencies": {
     "purescript-console": "~0.1.1"
