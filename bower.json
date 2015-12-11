@@ -8,7 +8,9 @@
     "purescript-node-streams": "~0.2.0",
     "purescript-foreign": "~0.7.2",
     "purescript-maps": "~0.5.3",
-    "purescript-nullable": "~0.2.1"
+    "purescript-nullable": "~0.2.1",
+    "purescript-unsafe-coerce": "~0.1.0",
+    "purescript-node-fs": "~0.9.2"
   },
   "devDependencies": {
     "purescript-console": "~0.1.1"

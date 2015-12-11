@@ -89,7 +89,7 @@ process won't necessarily kill it.
 #### `SpawnOptions`
 
 ``` purescript
-type SpawnOptions = { cwd :: String, stdio :: Array String, env :: Nullable (StrMap String), detached :: Boolean, uid :: Int, gid :: Int }
+type SpawnOptions = { cwd :: Maybe String, stdio :: Array (Maybe StdIOBehaviour), env :: Maybe (StrMap String), detached :: Boolean, uid :: Maybe Int, gid :: Maybe Int }
 ```
 
 #### `onExit`
@@ -139,5 +139,26 @@ defaultSpawnOptions :: SpawnOptions
 ``` purescript
 type ChildProcessError = { code :: String, errno :: String, syscall :: String }
 ```
+
+An error which occurred inside a child process.
+
+#### `StdIOBehaviour`
+
+``` purescript
+data StdIOBehaviour
+```
+
+Behaviour for standard IO streams (eg, standard input, standard output) of
+a child process.
+
+* `Pipe`: creates a pipe between the child and parent process, which can
+  then be accessed as a `Stream` via the `stdin`, `stdout`, or `stderr`
+  functions.
+* `Ignore`: ignore this stream. This will cause Node to open /dev/null and
+  connect it to the stream.
+* `ShareStream`: Connect the supplied stream to the corresponding file
+   descriptor in the child.
+* `ShareFD`: Connect the supplied file descriptor (which should be open
+  in the parent) to the corresponding file descriptor in the child.
 
 

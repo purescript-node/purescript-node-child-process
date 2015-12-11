@@ -3,7 +3,7 @@
 // module Node.ChildProcess
 /* eslint-env node*/
 
-exports.spawn = function spawn(command) {
+exports.spawnImpl = function spawnImpl(command) {
   return function(args) {
     return function(opts) {
       return function() {
@@ -70,4 +70,5 @@ exports.onError = function onError(cp){
   };
 };
 
+exports["undefined"] = undefined;
 exports.process = process;
