@@ -86,6 +86,22 @@ Send a signal to a child process. It's an unfortunate historical decision
 that this function is called "kill", as sending a signal to a child
 process won't necessarily kill it.
 
+#### `ChildProcessExit`
+
+``` purescript
+data ChildProcessExit
+  = Normally Int
+  | BySignal Signal
+```
+
+Specifies how a child process exited; normally (with an exit code), or
+due to a signal.
+
+##### Instances
+``` purescript
+Show ChildProcessExit
+```
+
 #### `SpawnOptions`
 
 ``` purescript
@@ -95,13 +111,13 @@ type SpawnOptions = { cwd :: Maybe String, stdio :: Array (Maybe StdIOBehaviour)
 #### `onExit`
 
 ``` purescript
-onExit :: forall eff. ChildProcess -> (Maybe Int -> Maybe Signal -> Eff eff Unit) -> Eff eff Unit
+onExit :: forall eff. ChildProcess -> (ChildProcessExit -> Eff eff Unit) -> Eff eff Unit
 ```
 
 #### `onClose`
 
 ``` purescript
-onClose :: forall eff. ChildProcess -> (Maybe Int -> Maybe Signal -> Eff eff Unit) -> Eff eff Unit
+onClose :: forall eff. ChildProcess -> (ChildProcessExit -> Eff eff Unit) -> Eff eff Unit
 ```
 
 #### `onMessage`
@@ -128,6 +144,21 @@ onError :: forall eff. ChildProcess -> (ChildProcessError -> Eff eff Unit) -> Ef
 spawn :: forall eff. String -> Array String -> SpawnOptions -> Eff (cp :: CHILD_PROCESS | eff) ChildProcess
 ```
 
+Spawn a child process. Note that, in the event that a child process could
+not be spawned (for example, if the executable was not found) this will
+not throw an error. Instead, the `ChildProcess` will be created anyway,
+but it will immediately emit an 'error' event.
+
+#### `fork`
+
+``` purescript
+fork :: forall eff. String -> Array String -> Eff (cp :: CHILD_PROCESS | eff) ChildProcess
+```
+
+A special case of `spawn` for creating Node.js child processes. The first
+argument is the module to be run, and the second is the argv (command line
+arguments).
+
 #### `defaultSpawnOptions`
 
 ``` purescript
@@ -146,6 +177,10 @@ An error which occurred inside a child process.
 
 ``` purescript
 data StdIOBehaviour
+  = Pipe
+  | Ignore
+  | ShareStream (forall r eff a. Stream r eff a)
+  | ShareFD FileDescriptor
 ```
 
 Behaviour for standard IO streams (eg, standard input, standard output) of
@@ -160,5 +195,29 @@ a child process.
    descriptor in the child.
 * `ShareFD`: Connect the supplied file descriptor (which should be open
   in the parent) to the corresponding file descriptor in the child.
+
+#### `pipe`
+
+``` purescript
+pipe :: Array (Maybe StdIOBehaviour)
+```
+
+Create pipes for each of the three standard IO streams.
+
+#### `inherit`
+
+``` purescript
+inherit :: Array (Maybe StdIOBehaviour)
+```
+
+Share stdin with stdin, stdout with stdout, and stderr with stderr.
+
+#### `ignore`
+
+``` purescript
+ignore :: Array (Maybe StdIOBehaviour)
+```
+
+Ignore all streams.
 
 
