@@ -18,6 +18,7 @@ module Node.ChildProcess
   , onMessage
   , onError
   , spawn
+  , fork
   , SpawnOptions()
   , defaultSpawnOptions
   , StdIOBehaviour(..)
@@ -170,6 +171,11 @@ foreign import spawnImpl :: forall opts eff. String -> Array String -> { | opts 
 
 -- There's gotta be a better way.
 foreign import undefined :: forall a. a
+
+-- | A special case of `spawn` for creating Node.js child processes. The first
+-- | argument is the module to be run, and the second is the argv (command line
+-- | arguments).
+foreign import fork :: forall eff. String -> Array String -> Eff (cp :: CHILD_PROCESS | eff) ChildProcess
 
 defaultSpawnOptions :: SpawnOptions
 defaultSpawnOptions =
