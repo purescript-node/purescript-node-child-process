@@ -47,7 +47,7 @@ exports.mkOnMessage = function mkOnMessage(nothing){
       return function(cb){
         return function(){
           cp.on("message", function(mess, sendHandle){
-            cb(mess, sendHandle ? just(sendHandle) : nothing);
+            cb(mess, sendHandle ? just(sendHandle) : nothing)();
           });
         };
       };
