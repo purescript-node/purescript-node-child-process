@@ -57,9 +57,9 @@ runChildProcess (ChildProcess r) = r
 -- | Note: some of these types are lies, and so it is unsafe to access some of
 -- | these record fields directly.
 type ChildProcessRec =
-  { stdin      :: forall eff. Nullable (Writable () (cp :: CHILD_PROCESS | eff) Buffer)
-  , stdout     :: forall eff. Nullable (Readable () (cp :: CHILD_PROCESS | eff) Buffer)
-  , stderr     :: forall eff. Nullable (Readable () (cp :: CHILD_PROCESS | eff) Buffer)
+  { stdin      :: forall eff. Nullable (Writable () (cp :: CHILD_PROCESS | eff))
+  , stdout     :: forall eff. Nullable (Readable () (cp :: CHILD_PROCESS | eff))
+  , stderr     :: forall eff. Nullable (Readable () (cp :: CHILD_PROCESS | eff))
   , pid        :: Int
   , connected  :: Boolean
   , kill       :: Signal -> Boolean
@@ -69,17 +69,17 @@ type ChildProcessRec =
 
 -- | The standard input stream of a child process. Note that this is only
 -- | available if the process was spawned with the stdin option set to "pipe".
-stdin :: forall eff. ChildProcess -> Writable () (cp :: CHILD_PROCESS | eff) Buffer
+stdin :: forall eff. ChildProcess -> Writable () (cp :: CHILD_PROCESS | eff)
 stdin = unsafeFromNullable (missingStream "stdin") <<< _.stdin <<< runChildProcess
 
 -- | The standard output stream of a child process. Note that this is only
 -- | available if the process was spawned with the stdout option set to "pipe".
-stdout :: forall eff. ChildProcess -> Readable () (cp :: CHILD_PROCESS | eff) Buffer
+stdout :: forall eff. ChildProcess -> Readable () (cp :: CHILD_PROCESS | eff)
 stdout = unsafeFromNullable (missingStream "stdout") <<< _.stdout <<< runChildProcess
 
 -- | The standard error stream of a child process. Note that this is only
 -- | available if the process was spawned with the stderr option set to "pipe".
-stderr :: forall eff. ChildProcess -> Readable () (cp :: CHILD_PROCESS| eff) Buffer
+stderr :: forall eff. ChildProcess -> Readable () (cp :: CHILD_PROCESS| eff)
 stderr = unsafeFromNullable (missingStream "stderr") <<< _.stderr <<< runChildProcess
 
 missingStream :: String -> String
@@ -217,7 +217,7 @@ type ChildProcessError =
 data StdIOBehaviour
   = Pipe
   | Ignore
-  | ShareStream (forall r eff a. Stream r eff a)
+  | ShareStream (forall r eff. Stream r eff)
   | ShareFD FS.FileDescriptor
 
 -- | Create pipes for each of the three standard IO streams.
