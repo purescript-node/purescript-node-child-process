@@ -2,7 +2,4 @@
 
 Bindings to Node's `child_process` API.
 
-## Module documentation
-
-* [Node.ChildProcess](docs/Node/ChildProcess.md)
-* [Node.ChildProcess.Signal](docs/Node/ChildProcess/Signal.md)
+Documentation is [on Pursuit](http://pursuit.purescript.org/packages/purescript-node-child-process)
