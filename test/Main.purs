@@ -21,6 +21,26 @@ main = do
   nonExistentExecutable $ do
     log "all good."
 
+  log "doesn't perform effects too early"
+  ls <- spawn "ls" ["-la"] defaultSpawnOptions
+  let unused = kill SIGTERM ls
+  onExit ls \exit ->
+    case exit of
+      Normally 0 ->
+        log "All good!"
+      _ -> do
+        log ("Bad exit: expected `Normally 0`, got: " <> show exit)
+
+  log "kills processes"
+  ls <- spawn "ls" ["-la"] defaultSpawnOptions
+  kill SIGTERM ls
+  onExit ls \exit ->
+    case exit of
+      BySignal SIGTERM ->
+        log "All good!"
+      _ -> do
+        log ("Bad exit: expected `BySignal SIGTERM`, got: " <> show exit)
+
 spawnLs = do
   ls <- spawn "ls" ["-la"] defaultSpawnOptions
   onExit ls \exit ->
