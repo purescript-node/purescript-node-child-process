@@ -100,10 +100,10 @@ pid :: ChildProcess -> Pid
 pid = _.pid <<< runChildProcess
 
 connected :: forall eff. ChildProcess -> Eff (cp :: CHILD_PROCESS | eff) Boolean
-connected = pure <<< _.connected <<< runChildProcess
+connected (ChildProcess cp) = mkEff \_ -> cp.connected
 
 send :: forall eff props. { | props } -> Handle -> ChildProcess -> Eff (cp :: CHILD_PROCESS | eff) Boolean
-send msg handle (ChildProcess cp) = pure (runFn2 cp.send msg handle)
+send msg handle (ChildProcess cp) = mkEff \_ -> runFn2 cp.send msg handle
 
 disconnect :: forall eff. ChildProcess -> Eff (cp :: CHILD_PROCESS | eff) Unit
 disconnect = _.disconnect <<< runChildProcess
@@ -112,7 +112,10 @@ disconnect = _.disconnect <<< runChildProcess
 -- | that this function is called "kill", as sending a signal to a child
 -- | process won't necessarily kill it.
 kill :: forall eff. Signal -> ChildProcess -> Eff (cp :: CHILD_PROCESS | eff) Boolean
-kill sig (ChildProcess cp) = pure (cp.kill (Signal.toString sig))
+kill sig (ChildProcess cp) = mkEff \_ -> cp.kill (Signal.toString sig)
+
+mkEff :: forall eff a. (Unit -> a) -> Eff eff a
+mkEff = unsafeCoerce
 
 -- | Specifies how a child process exited; normally (with an exit code), or
 -- | due to a signal.
