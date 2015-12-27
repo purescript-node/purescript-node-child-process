@@ -29,19 +29,23 @@ module Node.ChildProcess
 
 import Prelude
 
+import Control.Alt ((<|>))
+import Control.Bind ((>=>))
 import Control.Monad.Eff (Eff())
+import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 
 import Data.StrMap (StrMap())
 import Data.Function (Fn2(), runFn2)
 import Data.Nullable (Nullable(), toNullable, toMaybe)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Foreign (Foreign())
+import Data.Posix (Pid())
+import Data.Posix.Signal (Signal())
+import Data.Posix.Signal as Signal
 import Unsafe.Coerce (unsafeCoerce)
 
 import Node.FS as FS
-import Node.Buffer (Buffer())
 import Node.Stream (Readable(), Writable(), Stream())
-import Node.ChildProcess.Signal (Signal())
 
 -- | A handle for inter-process communication (IPC).
 foreign import data Handle :: *
@@ -60,9 +64,9 @@ type ChildProcessRec =
   { stdin      :: forall eff. Nullable (Writable () (cp :: CHILD_PROCESS | eff))
   , stdout     :: forall eff. Nullable (Readable () (cp :: CHILD_PROCESS | eff))
   , stderr     :: forall eff. Nullable (Readable () (cp :: CHILD_PROCESS | eff))
-  , pid        :: Int
+  , pid        :: Pid
   , connected  :: Boolean
-  , kill       :: Signal -> Boolean
+  , kill       :: String -> Boolean
   , send       :: forall r. Fn2 { | r} Handle Boolean
   , disconnect :: forall eff. Eff eff Unit
   }
@@ -92,7 +96,7 @@ foreign import unsafeFromNullable :: forall a. String -> Nullable a -> a
 
 -- | The process ID of a child process. Note that if the process has already
 -- | exited, another process may have taken the same ID, so be careful!
-pid :: ChildProcess -> Int
+pid :: ChildProcess -> Pid
 pid = _.pid <<< runChildProcess
 
 connected :: forall eff. ChildProcess -> Eff (cp :: CHILD_PROCESS | eff) Boolean
@@ -108,7 +112,7 @@ disconnect = _.disconnect <<< runChildProcess
 -- | that this function is called "kill", as sending a signal to a child
 -- | process won't necessarily kill it.
 kill :: forall eff. Signal -> ChildProcess -> Eff (cp :: CHILD_PROCESS | eff) Boolean
-kill sig (ChildProcess cp) = pure (cp.kill sig)
+kill sig (ChildProcess cp) = pure (cp.kill (Signal.toString sig))
 
 -- | Specifies how a child process exited; normally (with an exit code), or
 -- | due to a signal.
@@ -129,24 +133,27 @@ type SpawnOptions =
   , gid       :: Maybe Int
   }
 
-mkChildProcessExit :: Nullable Int -> Nullable Signal -> ChildProcessExit
+mkChildProcessExit :: Nullable Int -> Nullable String -> ChildProcessExit
 mkChildProcessExit code signal =
-  case toMaybe code of
-    Just code -> Normally code
-    Nothing -> BySignal (unsafeCoerce signal)
+  case fromCode code <|> fromSignal signal of
+    Just e -> e
+    Nothing -> unsafeThrow "Node.ChildProcess.mkChildProcessExit: Invalid arguments"
+  where
+  fromCode   = toMaybe >>> map Normally
+  fromSignal = toMaybe >=> Signal.fromString >>> map BySignal
 
 onExit :: forall eff. ChildProcess -> (ChildProcessExit -> Eff eff Unit) -> Eff eff Unit
 onExit = mkOnExit mkChildProcessExit
 
 foreign import mkOnExit :: forall eff.
-          (Nullable Int -> Nullable Signal -> ChildProcessExit)
+          (Nullable Int -> Nullable String -> ChildProcessExit)
           -> ChildProcess -> (ChildProcessExit -> Eff eff Unit) -> Eff eff Unit
 
 onClose :: forall eff. ChildProcess -> (ChildProcessExit -> Eff eff Unit) -> Eff eff Unit
 onClose = mkOnClose mkChildProcessExit
 
 foreign import mkOnClose :: forall eff.
-          (Nullable Int -> Nullable Signal -> ChildProcessExit)
+          (Nullable Int -> Nullable String -> ChildProcessExit)
           -> ChildProcess -> (ChildProcessExit -> Eff eff Unit) -> Eff eff Unit
 
 onMessage :: forall eff.  ChildProcess -> (Foreign -> Maybe Handle -> Eff eff Unit) -> Eff eff Unit
