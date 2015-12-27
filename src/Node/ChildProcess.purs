@@ -10,8 +10,8 @@ module Node.ChildProcess
   , kill
   , send
   , disconnect
-  , ChildProcessError()
-  , ChildProcessExit(..)
+  , Error()
+  , Exit(..)
   , onExit
   , onClose
   , onDisconnect
@@ -119,11 +119,11 @@ mkEff = unsafeCoerce
 
 -- | Specifies how a child process exited; normally (with an exit code), or
 -- | due to a signal.
-data ChildProcessExit
+data Exit
   = Normally Int
   | BySignal Signal
 
-instance showChildProcessExit :: Show ChildProcessExit where
+instance showExit :: Show Exit where
   show (Normally x) = "Normally " <> show x
   show (BySignal sig) = "BySignal " <> show sig
 
@@ -136,28 +136,28 @@ type SpawnOptions =
   , gid       :: Maybe Int
   }
 
-mkChildProcessExit :: Nullable Int -> Nullable String -> ChildProcessExit
-mkChildProcessExit code signal =
+mkExit :: Nullable Int -> Nullable String -> Exit
+mkExit code signal =
   case fromCode code <|> fromSignal signal of
     Just e -> e
-    Nothing -> unsafeThrow "Node.ChildProcess.mkChildProcessExit: Invalid arguments"
+    Nothing -> unsafeThrow "Node.ChildProcess.mkExit: Invalid arguments"
   where
   fromCode   = toMaybe >>> map Normally
   fromSignal = toMaybe >=> Signal.fromString >>> map BySignal
 
-onExit :: forall eff. ChildProcess -> (ChildProcessExit -> Eff eff Unit) -> Eff eff Unit
-onExit = mkOnExit mkChildProcessExit
+onExit :: forall eff. ChildProcess -> (Exit -> Eff eff Unit) -> Eff eff Unit
+onExit = mkOnExit mkExit
 
 foreign import mkOnExit :: forall eff.
-          (Nullable Int -> Nullable String -> ChildProcessExit)
-          -> ChildProcess -> (ChildProcessExit -> Eff eff Unit) -> Eff eff Unit
+          (Nullable Int -> Nullable String -> Exit)
+          -> ChildProcess -> (Exit -> Eff eff Unit) -> Eff eff Unit
 
-onClose :: forall eff. ChildProcess -> (ChildProcessExit -> Eff eff Unit) -> Eff eff Unit
-onClose = mkOnClose mkChildProcessExit
+onClose :: forall eff. ChildProcess -> (Exit -> Eff eff Unit) -> Eff eff Unit
+onClose = mkOnClose mkExit
 
 foreign import mkOnClose :: forall eff.
-          (Nullable Int -> Nullable String -> ChildProcessExit)
-          -> ChildProcess -> (ChildProcessExit -> Eff eff Unit) -> Eff eff Unit
+          (Nullable Int -> Nullable String -> Exit)
+          -> ChildProcess -> (Exit -> Eff eff Unit) -> Eff eff Unit
 
 onMessage :: forall eff.  ChildProcess -> (Foreign -> Maybe Handle -> Eff eff Unit) -> Eff eff Unit
 onMessage = mkOnMessage Nothing Just
@@ -167,7 +167,7 @@ foreign import mkOnMessage :: forall a eff.
           ChildProcess -> (Foreign -> Maybe Handle -> Eff eff Unit) -> Eff eff Unit
 
 foreign import onDisconnect :: forall eff. ChildProcess -> Eff eff Unit -> Eff eff Unit
-foreign import onError :: forall eff. ChildProcess -> (ChildProcessError -> Eff eff Unit) -> Eff eff Unit
+foreign import onError :: forall eff. ChildProcess -> (Error -> Eff eff Unit) -> Eff eff Unit
 
 -- | Spawn a child process. Note that, in the event that a child process could
 -- | not be spawned (for example, if the executable was not found) this will
@@ -206,7 +206,7 @@ defaultSpawnOptions =
   }
 
 -- | An error which occurred inside a child process.
-type ChildProcessError =
+type Error =
   { code :: String
   , errno :: String
   , syscall :: String
