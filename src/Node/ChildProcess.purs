@@ -1,4 +1,4 @@
--- | This module contains various types and function to allow you to spawn and
+-- | This module contains various types and functions to allow you to spawn and
 -- | interact with child processes.
 -- |
 -- | It is intended to be imported qualified, as follows:
