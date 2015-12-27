@@ -1,3 +1,12 @@
+-- | This module contains various types and function to allow you to spawn and
+-- | interact with child processes.
+-- |
+-- | It is intended to be imported qualified, as follows:
+-- |
+-- | ```purescript
+-- | import Node.ChildProcess (ChildProcess(), CHILD_PROCESS())
+-- | import Node.ChildProcess as ChildProcess
+-- | ```
 module Node.ChildProcess
   ( Handle()
   , ChildProcess()
