@@ -7,10 +7,10 @@ import Control.Bind
 import Control.Monad.Eff.Console
 import Control.Monad.Eff.Console.Unsafe
 
+import Data.Posix.Signal (Signal(..))
 import Node.Encoding (Encoding(UTF8))
 import Node.Buffer as Buffer
 import Node.ChildProcess
-import Node.ChildProcess.Signal
 import Node.Stream (onData)
 
 main = do
