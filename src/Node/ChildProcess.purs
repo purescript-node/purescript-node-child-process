@@ -11,6 +11,7 @@ module Node.ChildProcess
   , send
   , disconnect
   , Error()
+  , toStandardError
   , Exit(..)
   , onExit
   , onClose
@@ -32,6 +33,7 @@ import Prelude
 import Control.Alt ((<|>))
 import Control.Bind ((>=>))
 import Control.Monad.Eff (Eff())
+import Control.Monad.Eff.Exception as Exception
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 
 import Data.StrMap (StrMap())
@@ -211,6 +213,11 @@ type Error =
   , errno :: String
   , syscall :: String
   }
+
+-- | Convert a ChildProcess.Error to a standard Error, which can then be thrown
+-- | inside an Eff or Aff computation (for example).
+toStandardError :: Error -> Exception.Error
+toStandardError = unsafeCoerce
 
 -- | Behaviour for standard IO streams (eg, standard input, standard output) of
 -- | a child process.
