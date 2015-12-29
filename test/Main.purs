@@ -41,6 +41,9 @@ main = do
       _ -> do
         log ("Bad exit: expected `BySignal SIGTERM`, got: " <> show exit)
 
+  log "exec"
+  execLs
+
 spawnLs = do
   ls <- spawn "ls" ["-la"] defaultSpawnOptions
   onExit ls \exit ->
@@ -50,3 +53,7 @@ spawnLs = do
 nonExistentExecutable done = do
   ch <- spawn "this-does-not-exist" [] defaultSpawnOptions
   onError ch (\err -> logAny err *> done)
+
+execLs = do
+  exec "ls >&2" defaultExecOptions \r ->
+    log "redirected to stderr:" *> (Buffer.toString UTF8 r.stderr >>= log)

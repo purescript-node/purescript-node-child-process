@@ -7,6 +7,9 @@
 -- | import Node.ChildProcess (ChildProcess(), CHILD_PROCESS())
 -- | import Node.ChildProcess as ChildProcess
 -- | ```
+-- |
+-- | The [Node.js documentation](https://nodejs.org/api/child_process.html)
+-- | will probably also be useful to read if you want to use this module.
 module Node.ChildProcess
   ( Handle()
   , ChildProcess()
@@ -28,9 +31,13 @@ module Node.ChildProcess
   , onMessage
   , onError
   , spawn
-  , fork
   , SpawnOptions()
   , defaultSpawnOptions
+  , exec
+  , ExecOptions()
+  , ExecResult()
+  , defaultExecOptions
+  , fork
   , StdIOBehaviour(..)
   , pipe
   , inherit
@@ -48,13 +55,15 @@ import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 import Data.StrMap (StrMap())
 import Data.Function (Fn2(), runFn2)
 import Data.Nullable (Nullable(), toNullable, toMaybe)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Foreign (Foreign())
-import Data.Posix (Pid())
+import Data.Posix (Pid(), Gid(), Uid())
 import Data.Posix.Signal (Signal())
 import Data.Posix.Signal as Signal
 import Unsafe.Coerce (unsafeCoerce)
 
+import Node.Buffer (Buffer())
+import Node.Encoding (Encoding())
 import Node.FS as FS
 import Node.Stream (Readable(), Writable(), Stream())
 
@@ -138,14 +147,6 @@ instance showExit :: Show Exit where
   show (Normally x) = "Normally " <> show x
   show (BySignal sig) = "BySignal " <> show sig
 
-type SpawnOptions =
-  { cwd       :: Maybe String
-  , stdio     :: Array (Maybe StdIOBehaviour)
-  , env       :: Maybe (StrMap String)
-  , detached  :: Boolean
-  , uid       :: Maybe Int
-  , gid       :: Maybe Int
-  }
 
 mkExit :: Nullable Int -> Nullable String -> Exit
 mkExit code signal =
@@ -201,10 +202,14 @@ foreign import spawnImpl :: forall opts eff. String -> Array String -> { | opts 
 -- There's gotta be a better way.
 foreign import undefined :: forall a. a
 
--- | A special case of `spawn` for creating Node.js child processes. The first
--- | argument is the module to be run, and the second is the argv (command line
--- | arguments).
-foreign import fork :: forall eff. String -> Array String -> Eff (cp :: CHILD_PROCESS | eff) ChildProcess
+type SpawnOptions =
+  { cwd       :: Maybe String
+  , stdio     :: Array (Maybe StdIOBehaviour)
+  , env       :: Maybe (StrMap String)
+  , detached  :: Boolean
+  , uid       :: Maybe Uid
+  , gid       :: Maybe Gid
+  }
 
 defaultSpawnOptions :: SpawnOptions
 defaultSpawnOptions =
@@ -215,6 +220,71 @@ defaultSpawnOptions =
   , uid: Nothing
   , gid: Nothing
   }
+
+-- | Similar to `spawn`, except that this variant will buffer output, and wait
+-- | until the process has exited before calling the callback.
+-- |
+-- | Note that the child process will be killed if the amount of output exceeds
+-- | a certain threshold (the default is defined by Node.js).
+exec :: forall eff.
+  String ->
+  ExecOptions ->
+  (ExecResult -> Eff (cp :: CHILD_PROCESS | eff) Unit) ->
+  Eff (cp :: CHILD_PROCESS | eff) Unit
+exec cmd opts callback =
+  execImpl cmd (convert opts) \err stdout' stderr' ->
+    callback { error: (toMaybe err)
+             , stdout: stdout'
+             , stderr: stderr'
+             }
+  where
+  convert opts =
+    { cwd: fromMaybe undefined opts.cwd
+    , env: fromMaybe undefined opts.env
+    , timeout: fromMaybe undefined opts.timeout
+    , maxBuffer: fromMaybe undefined opts.maxBuffer
+    , killSignal: fromMaybe undefined opts.killSignal
+    , uid: fromMaybe undefined opts.uid
+    , gid: fromMaybe undefined opts.gid
+    }
+
+foreign import execImpl :: forall eff opts.
+  String ->
+  { | opts } ->
+  (Nullable Exception.Error -> Buffer -> Buffer -> Eff (cp :: CHILD_PROCESS | eff) Unit) ->
+  Eff (cp :: CHILD_PROCESS | eff) Unit
+
+type ExecOptions =
+  { cwd        :: Maybe String
+  , env        :: Maybe (StrMap String)
+  , timeout    :: Maybe Number
+  , maxBuffer  :: Maybe Int
+  , killSignal :: Maybe Signal
+  , uid        :: Maybe Uid
+  , gid        :: Maybe Gid
+  }
+
+defaultExecOptions :: ExecOptions
+defaultExecOptions =
+  { cwd: Nothing
+  , env: Nothing
+  , timeout: Nothing
+  , maxBuffer: Nothing
+  , killSignal: Nothing
+  , uid: Nothing
+  , gid: Nothing
+  }
+
+type ExecResult =
+  { stderr :: Buffer
+  , stdout :: Buffer
+  , error  :: Maybe Exception.Error
+  }
+
+-- | A special case of `spawn` for creating Node.js child processes. The first
+-- | argument is the module to be run, and the second is the argv (command line
+-- | arguments).
+foreign import fork :: forall eff. String -> Array String -> Eff (cp :: CHILD_PROCESS | eff) ChildProcess
 
 -- | An error which occurred inside a child process.
 type Error =

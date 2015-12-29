@@ -21,6 +21,17 @@ exports.spawnImpl = function spawnImpl(command) {
     };
   };
 };
+exports.execImpl = function execImpl(command) {
+  return function(opts) {
+    return function(callback) {
+      return function() {
+        return require("child_process").exec(command, opts, function(err, stdout, stderr) {
+          callback(err)(stdout)(stderr)();
+        });
+      };
+    };
+  };
+};
 exports.mkOnExit = function mkOnExit(mkChildExit){
   return function onExit(cp){
     return function(cb){
