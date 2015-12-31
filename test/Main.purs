@@ -19,7 +19,7 @@ main = do
 
   log "emits an error if executable does not exist"
   nonExistentExecutable $ do
-    log "all good."
+    log "nonexistent executable: all good."
 
   log "doesn't perform effects too early"
   ls <- spawn "ls" ["-la"] defaultSpawnOptions
