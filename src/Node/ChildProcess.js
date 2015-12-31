@@ -77,7 +77,9 @@ exports.mkOnMessage = function mkOnMessage(nothing){
 exports.onError = function onError(cp){
   return function(cb){
     return function(){
-      cp.on("error", cb);
+      cp.on("error", function(err) {
+        cb(err)()
+      });
     };
   };
 };
