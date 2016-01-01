@@ -55,7 +55,7 @@ import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 import Data.StrMap (StrMap())
 import Data.Function (Fn2(), runFn2)
 import Data.Nullable (Nullable(), toNullable, toMaybe)
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Foreign (Foreign())
 import Data.Posix (Pid(), Gid(), Uid())
 import Data.Posix.Signal (Signal())
@@ -63,7 +63,6 @@ import Data.Posix.Signal as Signal
 import Unsafe.Coerce (unsafeCoerce)
 
 import Node.Buffer (Buffer())
-import Node.Encoding (Encoding())
 import Node.FS as FS
 import Node.Stream (Readable(), Writable(), Stream())
 
