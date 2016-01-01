@@ -32,6 +32,13 @@ exports.execImpl = function execImpl(command) {
     };
   };
 };
+exports.fork = function fork(cmd) {
+  return function(args) {
+    return function() {
+      return require("child_process").fork(cmd, args);
+    };
+  };
+};
 exports.mkOnExit = function mkOnExit(mkChildExit){
   return function onExit(cp){
     return function(cb){
