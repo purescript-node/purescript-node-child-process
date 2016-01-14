@@ -34,6 +34,7 @@ module Node.ChildProcess
   , SpawnOptions()
   , defaultSpawnOptions
   , exec
+  , execFile
   , ExecOptions()
   , ExecResult()
   , defaultExecOptions
@@ -220,8 +221,10 @@ defaultSpawnOptions =
   , gid: Nothing
   }
 
--- | Similar to `spawn`, except that this variant will buffer output, and wait
--- | until the process has exited before calling the callback.
+-- | Similar to `spawn`, except that this variant will:
+-- | * run the given command with the shell,
+-- | * buffer output, and wait until the process has exited before calling the
+-- |   callback.
 -- |
 -- | Note that the child process will be killed if the amount of output exceeds
 -- | a certain threshold (the default is defined by Node.js).
@@ -231,27 +234,52 @@ exec :: forall eff.
   (ExecResult -> Eff (cp :: CHILD_PROCESS | eff) Unit) ->
   Eff (cp :: CHILD_PROCESS | eff) Unit
 exec cmd opts callback =
-  execImpl cmd (convert opts) \err stdout' stderr' ->
-    callback { error: (toMaybe err)
+  execImpl cmd (convertExecOptions opts) \err stdout' stderr' ->
+    callback { error: toMaybe err
              , stdout: stdout'
              , stderr: stderr'
              }
-  where
-  convert opts =
-    { cwd: fromMaybe undefined opts.cwd
-    , env: fromMaybe undefined opts.env
-    , timeout: fromMaybe undefined opts.timeout
-    , maxBuffer: fromMaybe undefined opts.maxBuffer
-    , killSignal: fromMaybe undefined opts.killSignal
-    , uid: fromMaybe undefined opts.uid
-    , gid: fromMaybe undefined opts.gid
-    }
 
-foreign import execImpl :: forall eff opts.
+foreign import execImpl :: forall eff.
   String ->
-  { | opts } ->
+  ActualExecOptions ->
   (Nullable Exception.Error -> Buffer -> Buffer -> Eff (cp :: CHILD_PROCESS | eff) Unit) ->
   Eff (cp :: CHILD_PROCESS | eff) Unit
+
+-- | Like `exec`, except instead of using a shell, it passes the arguments
+-- | directly to the specified command.
+execFile :: forall eff.
+  String ->
+  Array String ->
+  ExecOptions ->
+  (ExecResult -> Eff (cp :: CHILD_PROCESS | eff) Unit) ->
+  Eff (cp :: CHILD_PROCESS | eff) Unit
+execFile cmd args opts callback =
+  execFileImpl cmd args (convertExecOptions opts) \err stdout' stderr' ->
+    callback { error: toMaybe err
+             , stdout: stdout'
+             , stderr: stderr'
+             }
+
+foreign import execFileImpl :: forall eff.
+  String ->
+  Array String ->
+  ActualExecOptions ->
+  (Nullable Exception.Error -> Buffer -> Buffer -> Eff (cp :: CHILD_PROCESS | eff) Unit) ->
+  Eff (cp :: CHILD_PROCESS | eff) Unit
+
+foreign import data ActualExecOptions :: *
+
+convertExecOptions :: ExecOptions -> ActualExecOptions
+convertExecOptions opts = unsafeCoerce
+  { cwd: fromMaybe undefined opts.cwd
+  , env: fromMaybe undefined opts.env
+  , timeout: fromMaybe undefined opts.timeout
+  , maxBuffer: fromMaybe undefined opts.maxBuffer
+  , killSignal: fromMaybe undefined opts.killSignal
+  , uid: fromMaybe undefined opts.uid
+  , gid: fromMaybe undefined opts.gid
+  }
 
 type ExecOptions =
   { cwd        :: Maybe String

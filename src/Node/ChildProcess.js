@@ -32,6 +32,19 @@ exports.execImpl = function execImpl(command) {
     };
   };
 };
+exports.execFileImpl = function execImpl(command) {
+  return function(args) {
+    return function(opts) {
+      return function(callback) {
+        return function() {
+          return require("child_process").execFile(command, args, opts, function(err, stdout, stderr) {
+            callback(err)(stdout)(stderr)();
+          });
+        };
+      };
+    };
+  };
+};
 exports.fork = function fork(cmd) {
   return function(args) {
     return function() {
