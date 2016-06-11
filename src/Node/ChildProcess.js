@@ -1,6 +1,5 @@
 "use strict";
 
-// module Node.ChildProcess
 /* eslint-env node*/
 
 exports.unsafeFromNullable = function unsafeFromNullable(msg){
