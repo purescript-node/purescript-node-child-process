@@ -52,20 +52,18 @@ import Control.Bind ((>=>))
 import Control.Monad.Eff (Eff())
 import Control.Monad.Eff.Exception as Exception
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
-
-import Data.StrMap (StrMap())
-import Data.Function (Fn2(), runFn2)
-import Data.Nullable (Nullable(), toNullable, toMaybe)
-import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Foreign (Foreign())
+import Data.Function.Uncurried (Fn2(), runFn2)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Nullable (Nullable(), toNullable, toMaybe)
 import Data.Posix (Pid(), Gid(), Uid())
 import Data.Posix.Signal (Signal())
 import Data.Posix.Signal as Signal
-import Unsafe.Coerce (unsafeCoerce)
-
+import Data.StrMap (StrMap())
 import Node.Buffer (Buffer())
 import Node.FS as FS
 import Node.Stream (Readable(), Writable(), Stream())
+import Unsafe.Coerce (unsafeCoerce)
 
 -- | A handle for inter-process communication (IPC).
 foreign import data Handle :: *
@@ -146,7 +144,6 @@ data Exit
 instance showExit :: Show Exit where
   show (Normally x) = "Normally " <> show x
   show (BySignal sig) = "BySignal " <> show sig
-
 
 mkExit :: Nullable Int -> Nullable String -> Exit
 mkExit code signal =
