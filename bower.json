@@ -10,10 +10,10 @@
     "purescript-exceptions": "^1.0.0",
     "purescript-foreign": "^1.0.0",
     "purescript-functions": "^1.0.0",
-    "purescript-maps": "^1.0.0",
-    "purescript-node-fs": "^1.0.0",
+    "purescript-maps": "^1.1.0",
+    "purescript-node-fs": "^2.0.0",
     "purescript-node-streams": "^1.0.0",
-    "purescript-nullable": "^1.0.0",
+    "purescript-nullable": "^1.0.1",
     "purescript-posix-types": "^1.0.0",
     "purescript-unsafe-coerce": "^1.0.0"
   },
