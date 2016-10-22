@@ -6,6 +6,15 @@
     "type": "git",
     "url": "git://github.com/purescript-node/purescript-node-child-process"
   },
+  "ignore": [
+    "**/.*",
+    "bower_components",
+    "node_modules",
+    "output",
+    "test",
+    "bower.json",
+    "package.json"
+  ],
   "dependencies": {
     "purescript-exceptions": "^2.0.0",
     "purescript-foreign": "^3.0.0",
