@@ -48,7 +48,6 @@ module Node.ChildProcess
 import Prelude
 
 import Control.Alt ((<|>))
-import Control.Bind ((>=>))
 import Control.Monad.Eff (Eff())
 import Control.Monad.Eff.Exception as Exception
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
