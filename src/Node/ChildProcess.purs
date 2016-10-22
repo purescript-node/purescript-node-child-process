@@ -4,16 +4,16 @@
 -- | It is intended to be imported qualified, as follows:
 -- |
 -- | ```purescript
--- | import Node.ChildProcess (ChildProcess(), CHILD_PROCESS())
+-- | import Node.ChildProcess (ChildProcess, CHILD_PROCESS)
 -- | import Node.ChildProcess as ChildProcess
 -- | ```
 -- |
 -- | The [Node.js documentation](https://nodejs.org/api/child_process.html)
 -- | will probably also be useful to read if you want to use this module.
 module Node.ChildProcess
-  ( Handle()
-  , ChildProcess()
-  , CHILD_PROCESS()
+  ( Handle
+  , ChildProcess
+  , CHILD_PROCESS
   , stderr
   , stdout
   , stdin
@@ -22,7 +22,7 @@ module Node.ChildProcess
   , kill
   , send
   , disconnect
-  , Error()
+  , Error
   , toStandardError
   , Exit(..)
   , onExit
@@ -31,12 +31,12 @@ module Node.ChildProcess
   , onMessage
   , onError
   , spawn
-  , SpawnOptions()
+  , SpawnOptions
   , defaultSpawnOptions
   , exec
   , execFile
-  , ExecOptions()
-  , ExecResult()
+  , ExecOptions
+  , ExecResult
   , defaultExecOptions
   , fork
   , StdIOBehaviour(..)
@@ -48,20 +48,23 @@ module Node.ChildProcess
 import Prelude
 
 import Control.Alt ((<|>))
-import Control.Monad.Eff (Eff())
+import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Exception as Exception
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
-import Data.Foreign (Foreign())
-import Data.Function.Uncurried (Fn2(), runFn2)
+
+import Data.Foreign (Foreign)
+import Data.Function.Uncurried (Fn2, runFn2)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Nullable (Nullable(), toNullable, toMaybe)
-import Data.Posix (Pid(), Gid(), Uid())
-import Data.Posix.Signal (Signal())
+import Data.Nullable (Nullable, toNullable, toMaybe)
+import Data.Posix (Pid, Gid, Uid)
+import Data.Posix.Signal (Signal)
 import Data.Posix.Signal as Signal
-import Data.StrMap (StrMap())
-import Node.Buffer (Buffer())
+import Data.StrMap (StrMap)
+
+import Node.Buffer (Buffer)
 import Node.FS as FS
-import Node.Stream (Readable(), Writable(), Stream())
+import Node.Stream (Readable, Writable, Stream)
+
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | A handle for inter-process communication (IPC).
@@ -78,13 +81,13 @@ runChildProcess (ChildProcess r) = r
 -- | Note: some of these types are lies, and so it is unsafe to access some of
 -- | these record fields directly.
 type ChildProcessRec =
-  { stdin      :: forall eff. Nullable (Writable () (cp :: CHILD_PROCESS | eff))
-  , stdout     :: forall eff. Nullable (Readable () (cp :: CHILD_PROCESS | eff))
-  , stderr     :: forall eff. Nullable (Readable () (cp :: CHILD_PROCESS | eff))
-  , pid        :: Pid
-  , connected  :: Boolean
-  , kill       :: String -> Boolean
-  , send       :: forall r. Fn2 { | r} Handle Boolean
+  { stdin :: forall eff. Nullable (Writable () (cp :: CHILD_PROCESS | eff))
+  , stdout :: forall eff. Nullable (Readable () (cp :: CHILD_PROCESS | eff))
+  , stderr :: forall eff. Nullable (Readable () (cp :: CHILD_PROCESS | eff))
+  , pid :: Pid
+  , connected :: Boolean
+  , kill :: String -> Boolean
+  , send :: forall r. Fn2 { | r} Handle Boolean
   , disconnect :: forall eff. Eff eff Unit
   }
 
@@ -100,7 +103,7 @@ stdout = unsafeFromNullable (missingStream "stdout") <<< _.stdout <<< runChildPr
 
 -- | The standard error stream of a child process. Note that this is only
 -- | available if the process was spawned with the stderr option set to "pipe".
-stderr :: forall eff. ChildProcess -> Readable () (cp :: CHILD_PROCESS| eff)
+stderr :: forall eff. ChildProcess -> Readable () (cp :: CHILD_PROCESS | eff)
 stderr = unsafeFromNullable (missingStream "stderr") <<< _.stderr <<< runChildProcess
 
 missingStream :: String -> String
@@ -150,29 +153,39 @@ mkExit code signal =
     Just e -> e
     Nothing -> unsafeThrow "Node.ChildProcess.mkExit: Invalid arguments"
   where
-  fromCode   = toMaybe >>> map Normally
+  fromCode = toMaybe >>> map Normally
   fromSignal = toMaybe >=> Signal.fromString >>> map BySignal
 
 onExit :: forall eff. ChildProcess -> (Exit -> Eff eff Unit) -> Eff eff Unit
 onExit = mkOnExit mkExit
 
-foreign import mkOnExit :: forall eff.
-          (Nullable Int -> Nullable String -> Exit)
-          -> ChildProcess -> (Exit -> Eff eff Unit) -> Eff eff Unit
+foreign import mkOnExit
+  :: forall eff
+   . (Nullable Int -> Nullable String -> Exit)
+  -> ChildProcess
+  -> (Exit -> Eff eff Unit)
+  -> Eff eff Unit
 
 onClose :: forall eff. ChildProcess -> (Exit -> Eff eff Unit) -> Eff eff Unit
 onClose = mkOnClose mkExit
 
-foreign import mkOnClose :: forall eff.
-          (Nullable Int -> Nullable String -> Exit)
-          -> ChildProcess -> (Exit -> Eff eff Unit) -> Eff eff Unit
+foreign import mkOnClose
+  :: forall eff
+   . (Nullable Int -> Nullable String -> Exit)
+  -> ChildProcess
+  -> (Exit -> Eff eff Unit)
+  -> Eff eff Unit
 
-onMessage :: forall eff.  ChildProcess -> (Foreign -> Maybe Handle -> Eff eff Unit) -> Eff eff Unit
+onMessage :: forall eff. ChildProcess -> (Foreign -> Maybe Handle -> Eff eff Unit) -> Eff eff Unit
 onMessage = mkOnMessage Nothing Just
 
-foreign import mkOnMessage :: forall a eff.
-          Maybe a -> (a -> Maybe a) ->
-          ChildProcess -> (Foreign -> Maybe Handle -> Eff eff Unit) -> Eff eff Unit
+foreign import mkOnMessage
+  :: forall a eff
+   . Maybe a
+  -> (a -> Maybe a)
+  -> ChildProcess
+  -> (Foreign -> Maybe Handle -> Eff eff Unit)
+  -> Eff eff Unit
 
 foreign import onDisconnect :: forall eff. ChildProcess -> Eff eff Unit -> Eff eff Unit
 foreign import onError :: forall eff. ChildProcess -> (Error -> Eff eff Unit) -> Eff eff Unit
@@ -199,12 +212,12 @@ foreign import spawnImpl :: forall opts eff. String -> Array String -> { | opts 
 foreign import undefined :: forall a. a
 
 type SpawnOptions =
-  { cwd       :: Maybe String
-  , stdio     :: Array (Maybe StdIOBehaviour)
-  , env       :: Maybe (StrMap String)
-  , detached  :: Boolean
-  , uid       :: Maybe Uid
-  , gid       :: Maybe Gid
+  { cwd :: Maybe String
+  , stdio :: Array (Maybe StdIOBehaviour)
+  , env :: Maybe (StrMap String)
+  , detached :: Boolean
+  , uid :: Maybe Uid
+  , gid :: Maybe Gid
   }
 
 defaultSpawnOptions :: SpawnOptions
@@ -224,45 +237,51 @@ defaultSpawnOptions =
 -- |
 -- | Note that the child process will be killed if the amount of output exceeds
 -- | a certain threshold (the default is defined by Node.js).
-exec :: forall eff.
-  String ->
-  ExecOptions ->
-  (ExecResult -> Eff (cp :: CHILD_PROCESS | eff) Unit) ->
-  Eff (cp :: CHILD_PROCESS | eff) Unit
+exec
+  :: forall eff
+   . String
+  -> ExecOptions
+  -> (ExecResult -> Eff (cp :: CHILD_PROCESS | eff) Unit)
+  -> Eff (cp :: CHILD_PROCESS | eff) Unit
 exec cmd opts callback =
   execImpl cmd (convertExecOptions opts) \err stdout' stderr' ->
-    callback { error: toMaybe err
-             , stdout: stdout'
-             , stderr: stderr'
-             }
+    callback
+      { error: toMaybe err
+      , stdout: stdout'
+      , stderr: stderr'
+      }
 
-foreign import execImpl :: forall eff.
-  String ->
-  ActualExecOptions ->
-  (Nullable Exception.Error -> Buffer -> Buffer -> Eff (cp :: CHILD_PROCESS | eff) Unit) ->
-  Eff (cp :: CHILD_PROCESS | eff) Unit
+foreign import execImpl
+  :: forall eff
+   . String
+  -> ActualExecOptions
+  -> (Nullable Exception.Error -> Buffer -> Buffer -> Eff (cp :: CHILD_PROCESS | eff) Unit)
+  -> Eff (cp :: CHILD_PROCESS | eff) Unit
 
 -- | Like `exec`, except instead of using a shell, it passes the arguments
 -- | directly to the specified command.
-execFile :: forall eff.
-  String ->
-  Array String ->
-  ExecOptions ->
-  (ExecResult -> Eff (cp :: CHILD_PROCESS | eff) Unit) ->
-  Eff (cp :: CHILD_PROCESS | eff) Unit
+execFile
+  :: forall eff
+   .  String
+  -> Array String
+  -> ExecOptions
+  -> (ExecResult -> Eff (cp :: CHILD_PROCESS | eff) Unit)
+  -> Eff (cp :: CHILD_PROCESS | eff) Unit
 execFile cmd args opts callback =
   execFileImpl cmd args (convertExecOptions opts) \err stdout' stderr' ->
-    callback { error: toMaybe err
-             , stdout: stdout'
-             , stderr: stderr'
-             }
+    callback
+      { error: toMaybe err
+      , stdout: stdout'
+      , stderr: stderr'
+      }
 
-foreign import execFileImpl :: forall eff.
-  String ->
-  Array String ->
-  ActualExecOptions ->
-  (Nullable Exception.Error -> Buffer -> Buffer -> Eff (cp :: CHILD_PROCESS | eff) Unit) ->
-  Eff (cp :: CHILD_PROCESS | eff) Unit
+foreign import execFileImpl
+  :: forall eff
+   . String
+  -> Array String
+  -> ActualExecOptions
+  -> (Nullable Exception.Error -> Buffer -> Buffer -> Eff (cp :: CHILD_PROCESS | eff) Unit)
+  -> Eff (cp :: CHILD_PROCESS | eff) Unit
 
 foreign import data ActualExecOptions :: *
 
@@ -278,13 +297,13 @@ convertExecOptions opts = unsafeCoerce
   }
 
 type ExecOptions =
-  { cwd        :: Maybe String
-  , env        :: Maybe (StrMap String)
-  , timeout    :: Maybe Number
-  , maxBuffer  :: Maybe Int
+  { cwd :: Maybe String
+  , env :: Maybe (StrMap String)
+  , timeout :: Maybe Number
+  , maxBuffer :: Maybe Int
   , killSignal :: Maybe Signal
-  , uid        :: Maybe Uid
-  , gid        :: Maybe Gid
+  , uid :: Maybe Uid
+  , gid :: Maybe Gid
   }
 
 defaultExecOptions :: ExecOptions
@@ -301,7 +320,7 @@ defaultExecOptions =
 type ExecResult =
   { stderr :: Buffer
   , stdout :: Buffer
-  , error  :: Maybe Exception.Error
+  , error :: Maybe Exception.Error
   }
 
 -- | A special case of `spawn` for creating Node.js child processes. The first
@@ -361,9 +380,9 @@ foreign import data ActualStdIOBehaviour :: *
 
 toActualStdIOBehaviour :: StdIOBehaviour -> ActualStdIOBehaviour
 toActualStdIOBehaviour b = case b of
-  Pipe               -> c "pipe"
-  Ignore             -> c "ignore"
-  ShareFD x          -> c x
+  Pipe -> c "pipe"
+  Ignore -> c "ignore"
+  ShareFD x -> c x
   ShareStream stream -> c stream
   where
   c :: forall a. a -> ActualStdIOBehaviour
