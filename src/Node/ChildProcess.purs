@@ -195,7 +195,7 @@ foreign import onError :: forall eff. ChildProcess -> (Error -> Eff eff Unit) ->
 -- | not throw an error. Instead, the `ChildProcess` will be created anyway,
 -- | but it will immediately emit an 'error' event.
 spawn :: forall eff. String -> Array String -> SpawnOptions -> Eff (cp :: CHILD_PROCESS | eff) ChildProcess
-spawn cmd args opts = spawnImpl cmd args (convertOpts opts)
+spawn cmd args = spawnImpl cmd args <<< convertOpts
   where
   convertOpts opts =
     { cwd: fromMaybe undefined opts.cwd
