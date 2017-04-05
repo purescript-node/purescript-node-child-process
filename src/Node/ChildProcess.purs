@@ -48,7 +48,7 @@ module Node.ChildProcess
 import Prelude
 
 import Control.Alt ((<|>))
-import Control.Monad.Eff (Eff)
+import Control.Monad.Eff (kind Effect, Eff)
 import Control.Monad.Eff.Exception as Exception
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 
@@ -68,10 +68,10 @@ import Node.Stream (Readable, Writable, Stream)
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | A handle for inter-process communication (IPC).
-foreign import data Handle :: *
+foreign import data Handle :: Type
 
 -- | The effect for creating and interacting with child processes.
-foreign import data CHILD_PROCESS :: !
+foreign import data CHILD_PROCESS :: Effect
 
 newtype ChildProcess = ChildProcess ChildProcessRec
 
@@ -283,7 +283,7 @@ foreign import execFileImpl
   -> (Nullable Exception.Error -> Buffer -> Buffer -> Eff (cp :: CHILD_PROCESS | eff) Unit)
   -> Eff (cp :: CHILD_PROCESS | eff) Unit
 
-foreign import data ActualExecOptions :: *
+foreign import data ActualExecOptions :: Type
 
 convertExecOptions :: ExecOptions -> ActualExecOptions
 convertExecOptions opts = unsafeCoerce
@@ -376,7 +376,7 @@ foreign import process :: forall props. { | props }
 ignore :: Array (Maybe StdIOBehaviour)
 ignore = map Just [Ignore, Ignore, Ignore]
 
-foreign import data ActualStdIOBehaviour :: *
+foreign import data ActualStdIOBehaviour :: Type
 
 toActualStdIOBehaviour :: StdIOBehaviour -> ActualStdIOBehaviour
 toActualStdIOBehaviour b = case b of

@@ -13,7 +13,7 @@ import Node.ChildProcess (CHILD_PROCESS, Exit(..), defaultExecOptions, exec, onE
 import Node.Encoding (Encoding(UTF8))
 import Node.Stream (onData)
 
-type TestEff = Eff (cp :: CHILD_PROCESS, console :: CONSOLE, err :: EXCEPTION, buffer :: Buffer.BUFFER) Unit
+type TestEff = Eff (cp :: CHILD_PROCESS, console :: CONSOLE, exception :: EXCEPTION, buffer :: Buffer.BUFFER) Unit
 
 main :: TestEff
 main = do
@@ -36,7 +36,7 @@ main = do
 
   log "kills processes"
   spawn "ls" ["-la"] defaultSpawnOptions >>= \ls -> do
-    kill SIGTERM ls
+    _ <- kill SIGTERM ls
     onExit ls \exit ->
       case exit of
         BySignal SIGTERM ->
