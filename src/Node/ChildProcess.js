@@ -54,6 +54,16 @@ exports.execSyncImpl = function execSyncImpl (command) {
     };
 };
 
+exports.execFileSyncImpl = function execFileSyncImpl (command) {
+    return function (args) {
+        return function (opts) {
+            return function () {
+                return require('child_process').execFile(command, args, opts);
+            };
+        };
+    };
+};
+
 exports.fork = function fork (cmd) {
     return function (args) {
         return function () {

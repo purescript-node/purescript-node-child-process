@@ -39,6 +39,7 @@ module Node.ChildProcess
   , ExecResult
   , defaultExecOptions
   , execSync
+  , execFileSync
   , ExecSyncOptions
   , defaultExecSyncOptions
   , fork
@@ -340,6 +341,25 @@ execSync cmd opts =
 foreign import execSyncImpl
   :: forall eff
    . String
+  -> ActualExecSyncOptions
+  -> Eff (cp :: CHILD_PROCESS | eff) Buffer
+
+-- | Generally identical to `execFile`, with the exception that 
+-- | the method will not return until the child process has fully closed.
+-- | Returns: The stdout from the command.
+execFileSync
+  :: forall eff
+   .  String
+  -> Array String
+  -> ExecSyncOptions
+  -> Eff (cp :: CHILD_PROCESS | eff) Buffer
+execFileSync cmd args opts =
+  execFileSyncImpl cmd args (convertExecSyncOptions opts)
+
+foreign import execFileSyncImpl
+  :: forall eff
+   . String
+  -> Array String
   -> ActualExecSyncOptions
   -> Eff (cp :: CHILD_PROCESS | eff) Buffer
 
