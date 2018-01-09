@@ -58,7 +58,7 @@ exports.execFileSyncImpl = function execFileSyncImpl (command) {
     return function (args) {
         return function (opts) {
             return function () {
-                return require('child_process').execFile(command, args, opts);
+                return require('child_process').execFileSync(command, args, opts);
             };
         };
     };
