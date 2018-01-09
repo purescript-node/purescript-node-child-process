@@ -1,16 +1,16 @@
 module Test.Main where
 
+import Data.Maybe
 import Prelude
 
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Eff.Exception (EXCEPTION)
-
 import Data.Posix.Signal (Signal(..))
-
 import Node.Buffer as Buffer
-import Node.ChildProcess (CHILD_PROCESS, Exit(..), defaultExecOptions, exec, onError, defaultSpawnOptions, spawn, stdout, onExit, kill)
+import Node.ChildProcess (CHILD_PROCESS, Exit(..), defaultExecOptions, exec, defaultExecSyncOptions, execSync, onError, defaultSpawnOptions, spawn, stdout, onExit, kill)
 import Node.Encoding (Encoding(UTF8))
+import Node.Encoding as NE
 import Node.Stream (onData)
 
 type TestEff = Eff (cp :: CHILD_PROCESS, console :: CONSOLE, exception :: EXCEPTION, buffer :: Buffer.BUFFER) Unit
@@ -47,6 +47,8 @@ main = do
   log "exec"
   execLs
 
+  execSyncEcho "execSync ok"
+
 spawnLs :: TestEff
 spawnLs = do
   ls <- spawn "ls" ["-la"] defaultSpawnOptions
@@ -72,3 +74,9 @@ execLs :: TestEff
 execLs = do
   exec "ls >&2" defaultExecOptions \r ->
     log "redirected to stderr:" *> (Buffer.toString UTF8 r.stderr >>= log)
+
+execSyncEcho :: String -> TestEff
+execSyncEcho str = do
+  resBuf <- execSync "cat" (defaultExecSyncOptions {input = Just str})
+  res <- Buffer.toString NE.UTF8 resBuf
+  log res
