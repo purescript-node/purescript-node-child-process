@@ -2,14 +2,14 @@ module Test.Main where
 
 import Prelude
 
+import Data.Maybe (Maybe(..))
+import Data.Posix.Signal (Signal(..))
 import Effect (Effect)
 import Effect.Console (log)
-
-import Data.Posix.Signal (Signal(..))
-
 import Node.Buffer as Buffer
-import Node.ChildProcess (Exit(..), defaultExecOptions, exec, onError, defaultSpawnOptions, spawn, stdout, onExit, kill)
+import Node.ChildProcess (Exit(..), defaultExecOptions, exec, defaultExecSyncOptions, execSync, onError, defaultSpawnOptions, spawn, stdout, onExit, kill)
 import Node.Encoding (Encoding(UTF8))
+import Node.Encoding as NE
 import Node.Stream (onData)
 
 main :: Effect Unit
@@ -60,3 +60,9 @@ execLs :: Effect Unit
 execLs = do
   exec "ls >&2" defaultExecOptions \r ->
     log "redirected to stderr:" *> (Buffer.toString UTF8 r.stderr >>= log)
+
+execSyncEcho :: String -> Effect Unit
+execSyncEcho str = do
+  resBuf <- execSync "cat" (defaultExecSyncOptions {input = Just str})
+  res <- Buffer.toString NE.UTF8 resBuf
+  log res

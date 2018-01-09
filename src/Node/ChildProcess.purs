@@ -37,6 +37,10 @@ module Node.ChildProcess
   , ExecOptions
   , ExecResult
   , defaultExecOptions
+  , execSync
+  , execFileSync
+  , ExecSyncOptions
+  , defaultExecSyncOptions
   , fork
   , StdIOBehaviour(..)
   , pipe
@@ -47,24 +51,20 @@ module Node.ChildProcess
 import Prelude
 
 import Control.Alt ((<|>))
-import Effect (Effect)
-import Effect.Exception as Exception
-import Effect.Exception.Unsafe (unsafeThrow)
-
 import Data.Function.Uncurried (Fn2, runFn2)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Nullable (Nullable, toNullable, toMaybe)
 import Data.Posix (Pid, Gid, Uid)
 import Data.Posix.Signal (Signal)
 import Data.Posix.Signal as Signal
-
+import Effect (Effect)
+import Effect.Exception as Exception
+import Effect.Exception.Unsafe (unsafeThrow)
 import Foreign (Foreign)
 import Foreign.Object (Object)
-
 import Node.Buffer (Buffer)
 import Node.FS as FS
 import Node.Stream (Readable, Writable, Stream)
-
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | A handle for inter-process communication (IPC).
@@ -313,6 +313,79 @@ type ExecResult =
   , stdout :: Buffer
   , error :: Maybe Exception.Error
   }
+
+-- | Generally identical to `exec`, with the exception that
+-- | the method will not return until the child process has fully closed.
+-- | Returns: The stdout from the command.
+execSync
+  :: String
+  -> ExecSyncOptions
+  -> Effect Buffer
+execSync cmd opts =
+  execSyncImpl cmd (convertExecSyncOptions opts)
+
+foreign import execSyncImpl
+  :: String
+  -> ActualExecSyncOptions
+  -> Effect Buffer
+
+-- | Generally identical to `execFile`, with the exception that
+-- | the method will not return until the child process has fully closed.
+-- | Returns: The stdout from the command.
+execFileSync
+  :: String
+  -> Array String
+  -> ExecSyncOptions
+  -> Effect Buffer
+execFileSync cmd args opts =
+  execFileSyncImpl cmd args (convertExecSyncOptions opts)
+
+foreign import execFileSyncImpl
+  :: String
+  -> Array String
+  -> ActualExecSyncOptions
+  -> Effect Buffer
+
+foreign import data ActualExecSyncOptions :: Type
+
+convertExecSyncOptions :: ExecSyncOptions -> ActualExecSyncOptions
+convertExecSyncOptions opts = unsafeCoerce
+  { cwd: fromMaybe undefined opts.cwd
+  , input: fromMaybe undefined opts.input
+  , stdio: toActualStdIOOptions opts.stdio
+  , env: fromMaybe undefined opts.env
+  , timeout: fromMaybe undefined opts.timeout
+  , maxBuffer: fromMaybe undefined opts.maxBuffer
+  , killSignal: fromMaybe undefined opts.killSignal
+  , uid: fromMaybe undefined opts.uid
+  , gid: fromMaybe undefined opts.gid
+  }
+
+type ExecSyncOptions =
+  { cwd :: Maybe String
+  , input :: Maybe String
+  , stdio :: Array (Maybe StdIOBehaviour)
+  , env :: Maybe (Object String)
+  , timeout :: Maybe Number
+  , maxBuffer :: Maybe Int
+  , killSignal :: Maybe Signal
+  , uid :: Maybe Uid
+  , gid :: Maybe Gid
+  }
+
+defaultExecSyncOptions :: ExecSyncOptions
+defaultExecSyncOptions =
+  { cwd: Nothing
+  , input: Nothing
+  , stdio: pipe
+  , env: Nothing
+  , timeout: Nothing
+  , maxBuffer: Nothing
+  , killSignal: Nothing
+  , uid: Nothing
+  , gid: Nothing
+  }
+
 
 -- | A special case of `spawn` for creating Node.js child processes. The first
 -- | argument is the module to be run, and the second is the argv (command line
