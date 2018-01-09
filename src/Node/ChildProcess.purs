@@ -38,6 +38,9 @@ module Node.ChildProcess
   , ExecOptions
   , ExecResult
   , defaultExecOptions
+  , execSync
+  , ExecSyncOptions
+  , defaultExecSyncOptions
   , fork
   , StdIOBehaviour(..)
   , pipe
@@ -322,6 +325,64 @@ type ExecResult =
   , stdout :: Buffer
   , error :: Maybe Exception.Error
   }
+
+-- | Generally identical to `exec`, with the exception that 
+-- | the method will not return until the child process has fully closed.
+-- | Returns: The stdout from the command.
+execSync
+  :: forall eff
+   . String
+  -> ExecSyncOptions
+  -> Eff (cp :: CHILD_PROCESS | eff) Buffer
+execSync cmd opts =
+  execSyncImpl cmd (convertExecSyncOptions opts)
+
+foreign import execSyncImpl
+  :: forall eff
+   . String
+  -> ActualExecSyncOptions
+  -> Eff (cp :: CHILD_PROCESS | eff) Buffer
+
+foreign import data ActualExecSyncOptions :: Type
+
+convertExecSyncOptions :: ExecSyncOptions -> ActualExecSyncOptions
+convertExecSyncOptions opts = unsafeCoerce
+  { cwd: fromMaybe undefined opts.cwd
+  , input: fromMaybe undefined opts.input
+  , stdio: toActualStdIOOptions opts.stdio
+  , env: fromMaybe undefined opts.env
+  , timeout: fromMaybe undefined opts.timeout
+  , maxBuffer: fromMaybe undefined opts.maxBuffer
+  , killSignal: fromMaybe undefined opts.killSignal
+  , uid: fromMaybe undefined opts.uid
+  , gid: fromMaybe undefined opts.gid
+  }
+
+type ExecSyncOptions =
+  { cwd :: Maybe String
+  , input :: Maybe String
+  , stdio :: Array (Maybe StdIOBehaviour)
+  , env :: Maybe (StrMap String)
+  , timeout :: Maybe Number
+  , maxBuffer :: Maybe Int
+  , killSignal :: Maybe Signal
+  , uid :: Maybe Uid
+  , gid :: Maybe Gid
+  }
+
+defaultExecSyncOptions :: ExecSyncOptions
+defaultExecSyncOptions =
+  { cwd: Nothing
+  , input: Nothing
+  , stdio: pipe
+  , env: Nothing
+  , timeout: Nothing
+  , maxBuffer: Nothing
+  , killSignal: Nothing
+  , uid: Nothing
+  , gid: Nothing
+  }
+
 
 -- | A special case of `spawn` for creating Node.js child processes. The first
 -- | argument is the module to be run, and the second is the argv (command line

@@ -31,6 +31,7 @@ exports.execImpl = function execImpl (command) {
     };
 };
 
+
 exports.execFileImpl = function execImpl (command) {
     return function (args) {
         return function (opts) {
@@ -41,6 +42,14 @@ exports.execFileImpl = function execImpl (command) {
                     });
                 };
             };
+        };
+    };
+};
+
+exports.execSyncImpl = function execSyncImpl (command) {
+    return function (opts) {
+        return function () {
+            return require('child_process').execSync(command, opts);
         };
     };
 };
