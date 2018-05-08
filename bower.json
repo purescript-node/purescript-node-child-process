@@ -16,17 +16,17 @@
     "package.json"
   ],
   "dependencies": {
-    "purescript-exceptions": "^3.0.0",
-    "purescript-foreign": "^4.0.0",
-    "purescript-functions": "^3.0.0",
-    "purescript-maps": "^3.0.0",
-    "purescript-node-fs": "^4.0.0",
-    "purescript-node-streams": "^3.0.0",
-    "purescript-nullable": "^3.0.0",
-    "purescript-posix-types": "^3.0.0",
-    "purescript-unsafe-coerce": "^3.0.0"
+    "purescript-exceptions": "#compiler/0.12",
+    "purescript-foreign": "#compiler/0.12",
+    "purescript-functions": "#compiler/0.12",
+    "purescript-node-fs": "#compiler/0.12",
+    "purescript-node-streams": "#compiler/0.12",
+    "purescript-nullable": "#compiler/0.12",
+    "purescript-posix-types": "#compiler/0.12",
+    "purescript-unsafe-coerce": "#compiler/0.12",
+    "purescript-foreign-object": "#compiler/0.12"
   },
   "devDependencies": {
-    "purescript-console": "^3.0.0"
+    "purescript-console": "#compiler/0.12"
   }
 }
