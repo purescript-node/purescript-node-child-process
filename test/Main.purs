@@ -70,5 +70,7 @@ nonExistentExecutable done = do
 
 execLs :: TestEff
 execLs = do
-  exec "ls >&2" defaultExecOptions \r ->
+  -- returned ChildProcess is ignored here
+  _ <- exec "ls >&2" defaultExecOptions \r ->
     log "redirected to stderr:" *> (Buffer.toString UTF8 r.stderr >>= log)
+  pure unit
