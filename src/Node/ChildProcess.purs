@@ -86,7 +86,7 @@ type ChildProcessRec =
   , stderr :: forall eff. Nullable (Readable () (cp :: CHILD_PROCESS | eff))
   , pid :: Pid
   , connected :: Boolean
-  , kill :: String -> Boolean
+  , kill :: String -> Unit
   , send :: forall r. Fn2 { | r} Handle Boolean
   , disconnect :: forall eff. Eff eff Unit
   }
@@ -103,7 +103,10 @@ stdout = unsafeFromNullable (missingStream "stdout") <<< _.stdout <<< runChildPr
 
 -- | The standard error stream of a child process. Note that this is only
 -- | available if the process was spawned with the stderr option set to "pipe".
-stderr :: forall eff. ChildProcess -> Readable () (cp :: CHILD_PROCESS | eff)
+stderr
+  :: forall eff
+   . ChildProcess
+  -> Readable () (cp :: CHILD_PROCESS | eff)
 stderr = unsafeFromNullable (missingStream "stderr") <<< _.stderr <<< runChildProcess
 
 missingStream :: String -> String
@@ -128,10 +131,18 @@ send msg handle (ChildProcess cp) = mkEff \_ -> runFn2 cp.send msg handle
 disconnect :: forall eff. ChildProcess -> Eff (cp :: CHILD_PROCESS | eff) Unit
 disconnect = _.disconnect <<< runChildProcess
 
--- | Send a signal to a child process. It's an unfortunate historical decision
--- | that this function is called "kill", as sending a signal to a child
--- | process won't necessarily kill it.
-kill :: forall eff. Signal -> ChildProcess -> Eff (cp :: CHILD_PROCESS | eff) Boolean
+-- | Send a signal to a child process. In the same way as the
+-- | [unix kill(2) system call](https://linux.die.net/man/2/kill),
+-- | sending a signal to a child process won't necessarily kill it.
+-- |
+-- | The resulting effects of this function depend on the process
+-- | and the signal and can vary from system to system.
+-- | The child process might emit an "error" event if the signal
+-- | could not be delivered.
+kill :: forall eff
+      . Signal
+     -> ChildProcess
+     -> Eff (cp :: CHILD_PROCESS | eff) Unit
 kill sig (ChildProcess cp) = mkEff \_ -> cp.kill (Signal.toString sig)
 
 mkEff :: forall eff a. (Unit -> a) -> Eff eff a
