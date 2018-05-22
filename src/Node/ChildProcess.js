@@ -69,7 +69,7 @@ exports.mkOnClose = function mkOnClose (mkChildExit) {
     return function onClose (cp) {
         return function (cb) {
             return function () {
-                cp.on('exit', function (code, signal) {
+                cp.on('close', function (code, signal) {
                     cb(mkChildExit(code)(signal))();
                 });
             };
