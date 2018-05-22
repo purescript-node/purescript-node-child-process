@@ -83,7 +83,7 @@ type ChildProcessRec =
   , stderr :: Nullable (Readable ())
   , pid :: Pid
   , connected :: Boolean
-  , kill :: String -> Boolean
+  , kill :: String -> Unit
   , send :: forall r. Fn2 { | r} Handle Boolean
   , disconnect :: Effect Unit
   }
@@ -125,10 +125,15 @@ send msg handle (ChildProcess cp) = mkEffect \_ -> runFn2 cp.send msg handle
 disconnect :: ChildProcess -> Effect Unit
 disconnect = _.disconnect <<< runChildProcess
 
--- | Send a signal to a child process. It's an unfortunate historical decision
--- | that this function is called "kill", as sending a signal to a child
--- | process won't necessarily kill it.
-kill :: Signal -> ChildProcess -> Effect Boolean
+-- | Send a signal to a child process. In the same way as the
+-- | [unix kill(2) system call](https://linux.die.net/man/2/kill),
+-- | sending a signal to a child process won't necessarily kill it.
+-- |
+-- | The resulting effects of this function depend on the process
+-- | and the signal and can vary from system to system.
+-- | The child process might emit an "error" event if the signal
+-- | could not be delivered.
+kill :: Signal -> ChildProcess -> Effect Unit
 kill sig (ChildProcess cp) = mkEffect \_ -> cp.kill (Signal.toString sig)
 
 mkEffect :: forall a. (Unit -> a) -> Effect a
