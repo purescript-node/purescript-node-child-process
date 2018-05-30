@@ -236,7 +236,7 @@ exec
   :: String
   -> ExecOptions
   -> (ExecResult -> Effect Unit)
-  -> Effect Unit
+  -> Effect ChildProcess
 exec cmd opts callback =
   execImpl cmd (convertExecOptions opts) \err stdout' stderr' ->
     callback
@@ -249,7 +249,7 @@ foreign import execImpl
   :: String
   -> ActualExecOptions
   -> (Nullable Exception.Error -> Buffer -> Buffer -> Effect Unit)
-  -> Effect Unit
+  -> Effect ChildProcess
 
 -- | Like `exec`, except instead of using a shell, it passes the arguments
 -- | directly to the specified command.
@@ -258,7 +258,7 @@ execFile
   -> Array String
   -> ExecOptions
   -> (ExecResult -> Effect Unit)
-  -> Effect Unit
+  -> Effect ChildProcess
 execFile cmd args opts callback =
   execFileImpl cmd args (convertExecOptions opts) \err stdout' stderr' ->
     callback
@@ -272,7 +272,7 @@ foreign import execFileImpl
   -> Array String
   -> ActualExecOptions
   -> (Nullable Exception.Error -> Buffer -> Buffer -> Effect Unit)
-  -> Effect Unit
+  -> Effect ChildProcess
 
 foreign import data ActualExecOptions :: Type
 
