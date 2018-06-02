@@ -9,13 +9,14 @@
 -- | ```
 -- |
 -- | The [Node.js documentation](https://nodejs.org/api/child_process.html)
--- | will probably also be useful to read if you want to use this module.
+-- | forms the basis for this module and has in-depth documentation about
+-- | runtime behaviour.
 module Node.ChildProcess
   ( Handle
   , ChildProcess
-  , stderr
-  , stdout
   , stdin
+  , stdout
+  , stderr
   , pid
   , connected
   , kill
@@ -70,6 +71,8 @@ import Unsafe.Coerce (unsafeCoerce)
 -- | A handle for inter-process communication (IPC).
 foreign import data Handle :: Type
 
+-- | Opaque type returned by `spawn`, `fork` and `exec`.
+-- | Needed as input for most methods in this module.
 newtype ChildProcess = ChildProcess ChildProcessRec
 
 runChildProcess :: ChildProcess -> ChildProcessRec
@@ -116,12 +119,24 @@ foreign import unsafeFromNullable :: forall a. String -> Nullable a -> a
 pid :: ChildProcess -> Pid
 pid = _.pid <<< runChildProcess
 
+-- | Indicates whether it is still possible to send and receive
+-- | messages from the child process.
 connected :: ChildProcess -> Effect Boolean
 connected (ChildProcess cp) = mkEffect \_ -> cp.connected
 
-send :: forall props. { | props } -> Handle -> ChildProcess -> Effect Boolean
+-- | Send messages to the (`nodejs`) child process.
+-- |
+-- | See the [node documentation](https://nodejs.org/api/child_process.html#child_process_subprocess_send_message_sendhandle_options_callback)
+-- | for in-depth documentation.
+send
+  :: forall props
+   . { | props }
+  -> Handle
+  -> ChildProcess
+  -> Effect Boolean
 send msg handle (ChildProcess cp) = mkEffect \_ -> runFn2 cp.send msg handle
 
+-- | Closes the IPC channel between parent and child.
 disconnect :: ChildProcess -> Effect Unit
 disconnect = _.disconnect <<< runChildProcess
 
@@ -130,8 +145,8 @@ disconnect = _.disconnect <<< runChildProcess
 -- | sending a signal to a child process won't necessarily kill it.
 -- |
 -- | The resulting effects of this function depend on the process
--- | and the signal and can vary from system to system.
--- | The child process might emit an "error" event if the signal
+-- | and the signal. They can vary from system to system.
+-- | The child process might emit an `"error"` event if the signal
 -- | could not be delivered.
 kill :: Signal -> ChildProcess -> Effect Unit
 kill sig (ChildProcess cp) = mkEffect \_ -> cp.kill (Signal.toString sig)
@@ -158,7 +173,11 @@ mkExit code signal =
   fromCode = toMaybe >>> map Normally
   fromSignal = toMaybe >=> Signal.fromString >>> map BySignal
 
-onExit :: ChildProcess -> (Exit -> Effect Unit) -> Effect Unit
+-- | Handle the `"exit"` signal.
+onExit
+  :: ChildProcess
+  -> (Exit -> Effect Unit)
+  -> Effect Unit
 onExit = mkOnExit mkExit
 
 foreign import mkOnExit
@@ -167,7 +186,11 @@ foreign import mkOnExit
   -> (Exit -> Effect Unit)
   -> Effect Unit
 
-onClose :: ChildProcess -> (Exit -> Effect Unit) -> Effect Unit
+-- | Handle the `"close"` signal.
+onClose
+  :: ChildProcess
+  -> (Exit -> Effect Unit)
+  -> Effect Unit
 onClose = mkOnClose mkExit
 
 foreign import mkOnClose
@@ -176,7 +199,11 @@ foreign import mkOnClose
   -> (Exit -> Effect Unit)
   -> Effect Unit
 
-onMessage :: ChildProcess -> (Foreign -> Maybe Handle -> Effect Unit) -> Effect Unit
+-- | Handle the `"message"` signal.
+onMessage
+  :: ChildProcess
+  -> (Foreign -> Maybe Handle -> Effect Unit)
+  -> Effect Unit
 onMessage = mkOnMessage Nothing Just
 
 foreign import mkOnMessage
@@ -187,14 +214,27 @@ foreign import mkOnMessage
   -> (Foreign -> Maybe Handle -> Effect Unit)
   -> Effect Unit
 
-foreign import onDisconnect :: ChildProcess -> Effect Unit -> Effect Unit
-foreign import onError :: ChildProcess -> (Error -> Effect Unit) -> Effect Unit
+-- | Handle the `"disconnect"` signal.
+foreign import onDisconnect
+  :: ChildProcess
+  -> Effect Unit
+  -> Effect Unit
+
+-- | Handle the `"error"` signal.
+foreign import onError
+  :: ChildProcess
+  -> (Error -> Effect Unit)
+  -> Effect Unit
 
 -- | Spawn a child process. Note that, in the event that a child process could
 -- | not be spawned (for example, if the executable was not found) this will
 -- | not throw an error. Instead, the `ChildProcess` will be created anyway,
 -- | but it will immediately emit an 'error' event.
-spawn :: String -> Array String -> SpawnOptions -> Effect ChildProcess
+spawn
+  :: String
+  -> Array String
+  -> SpawnOptions
+  -> Effect ChildProcess
 spawn cmd args = spawnImpl cmd args <<< convertOpts
   where
   convertOpts opts =
@@ -206,11 +246,18 @@ spawn cmd args = spawnImpl cmd args <<< convertOpts
     , gid: fromMaybe undefined opts.gid
     }
 
-foreign import spawnImpl :: forall opts. String -> Array String -> { | opts } -> Effect ChildProcess
+foreign import spawnImpl
+  :: forall opts
+   . String
+  -> Array String
+  -> { | opts }
+  -> Effect ChildProcess
 
 -- There's gotta be a better way.
 foreign import undefined :: forall a. a
 
+-- | Configuration of `spawn`. Fields set to `Nothing` will use
+-- | the node defaults.
 type SpawnOptions =
   { cwd :: Maybe String
   , stdio :: Array (Maybe StdIOBehaviour)
@@ -220,6 +267,8 @@ type SpawnOptions =
   , gid :: Maybe Gid
   }
 
+-- | A default set of `SpawnOptions`. Everything is set to `Nothing`,
+-- | `detached` is `false` and `stdio` is `ChildProcess.pipe`.
 defaultSpawnOptions :: SpawnOptions
 defaultSpawnOptions =
   { cwd: Nothing
@@ -292,6 +341,8 @@ convertExecOptions opts = unsafeCoerce
   , gid: fromMaybe undefined opts.gid
   }
 
+-- | Configuration of `exec`. Fields set to `Nothing`
+-- | will use the node defaults.
 type ExecOptions =
   { cwd :: Maybe String
   , env :: Maybe (Object String)
@@ -302,6 +353,7 @@ type ExecOptions =
   , gid :: Maybe Gid
   }
 
+-- | A default set of `ExecOptions`. Everything is set to `Nothing`.
 defaultExecOptions :: ExecOptions
 defaultExecOptions =
   { cwd: Nothing
@@ -313,6 +365,7 @@ defaultExecOptions =
   , gid: Nothing
   }
 
+-- | The combined output of a process calld with `exec`.
 type ExecResult =
   { stderr :: Buffer
   , stdout :: Buffer
@@ -391,11 +444,13 @@ defaultExecSyncOptions =
   , gid: Nothing
   }
 
-
 -- | A special case of `spawn` for creating Node.js child processes. The first
 -- | argument is the module to be run, and the second is the argv (command line
 -- | arguments).
-foreign import fork :: String -> Array String -> Effect ChildProcess
+foreign import fork
+  :: String
+  -> Array String
+  -> Effect ChildProcess
 
 -- | An error which occurred inside a child process.
 type Error =
@@ -431,7 +486,8 @@ data StdIOBehaviour
 pipe :: Array (Maybe StdIOBehaviour)
 pipe = map Just [Pipe, Pipe, Pipe]
 
--- | Share stdin with stdin, stdout with stdout, and stderr with stderr.
+-- | Share `stdin` with `stdin`, `stdout` with `stdout`,
+-- | and `stderr` with `stderr`.
 inherit :: Array (Maybe StdIOBehaviour)
 inherit = map Just
   [ ShareStream process.stdin
@@ -444,6 +500,9 @@ foreign import process :: forall props. { | props }
 -- | Ignore all streams.
 ignore :: Array (Maybe StdIOBehaviour)
 ignore = map Just [Ignore, Ignore, Ignore]
+
+
+-- Helpers
 
 foreign import data ActualStdIOBehaviour :: Type
 
