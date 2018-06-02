@@ -9,14 +9,14 @@
 -- | ```
 -- |
 -- | The [Node.js documentation](https://nodejs.org/api/child_process.html)
--- | will probably also be useful to read if you want to use this module.
+-- | forms the basis for this module and has in-depth documentation about
+-- | runtime behaviour.
 module Node.ChildProcess
   ( Handle
   , ChildProcess
-  , CHILD_PROCESS
-  , stderr
-  , stdout
   , stdin
+  , stdout
+  , stderr
   , pid
   , connected
   , kill
@@ -38,6 +38,10 @@ module Node.ChildProcess
   , ExecOptions
   , ExecResult
   , defaultExecOptions
+  , execSync
+  , execFileSync
+  , ExecSyncOptions
+  , defaultExecSyncOptions
   , fork
   , StdIOBehaviour(..)
   , pipe
@@ -48,31 +52,27 @@ module Node.ChildProcess
 import Prelude
 
 import Control.Alt ((<|>))
-import Control.Monad.Eff (kind Effect, Eff)
-import Control.Monad.Eff.Exception as Exception
-import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
-
-import Data.Foreign (Foreign)
 import Data.Function.Uncurried (Fn2, runFn2)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Nullable (Nullable, toNullable, toMaybe)
 import Data.Posix (Pid, Gid, Uid)
 import Data.Posix.Signal (Signal)
 import Data.Posix.Signal as Signal
-import Data.StrMap (StrMap)
-
+import Effect (Effect)
+import Effect.Exception as Exception
+import Effect.Exception.Unsafe (unsafeThrow)
+import Foreign (Foreign)
+import Foreign.Object (Object)
 import Node.Buffer (Buffer)
 import Node.FS as FS
 import Node.Stream (Readable, Writable, Stream)
-
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | A handle for inter-process communication (IPC).
 foreign import data Handle :: Type
 
--- | The effect for creating and interacting with child processes.
-foreign import data CHILD_PROCESS :: Effect
-
+-- | Opaque type returned by `spawn`, `fork` and `exec`.
+-- | Needed as input for most methods in this module.
 newtype ChildProcess = ChildProcess ChildProcessRec
 
 runChildProcess :: ChildProcess -> ChildProcessRec
@@ -81,29 +81,29 @@ runChildProcess (ChildProcess r) = r
 -- | Note: some of these types are lies, and so it is unsafe to access some of
 -- | these record fields directly.
 type ChildProcessRec =
-  { stdin :: forall eff. Nullable (Writable () (cp :: CHILD_PROCESS | eff))
-  , stdout :: forall eff. Nullable (Readable () (cp :: CHILD_PROCESS | eff))
-  , stderr :: forall eff. Nullable (Readable () (cp :: CHILD_PROCESS | eff))
+  { stdin :: Nullable (Writable ())
+  , stdout :: Nullable (Readable ())
+  , stderr :: Nullable (Readable ())
   , pid :: Pid
   , connected :: Boolean
-  , kill :: String -> Boolean
+  , kill :: String -> Unit
   , send :: forall r. Fn2 { | r} Handle Boolean
-  , disconnect :: forall eff. Eff eff Unit
+  , disconnect :: Effect Unit
   }
 
 -- | The standard input stream of a child process. Note that this is only
 -- | available if the process was spawned with the stdin option set to "pipe".
-stdin :: forall eff. ChildProcess -> Writable () (cp :: CHILD_PROCESS | eff)
+stdin :: ChildProcess -> Writable ()
 stdin = unsafeFromNullable (missingStream "stdin") <<< _.stdin <<< runChildProcess
 
 -- | The standard output stream of a child process. Note that this is only
 -- | available if the process was spawned with the stdout option set to "pipe".
-stdout :: forall eff. ChildProcess -> Readable () (cp :: CHILD_PROCESS | eff)
+stdout :: ChildProcess -> Readable ()
 stdout = unsafeFromNullable (missingStream "stdout") <<< _.stdout <<< runChildProcess
 
 -- | The standard error stream of a child process. Note that this is only
 -- | available if the process was spawned with the stderr option set to "pipe".
-stderr :: forall eff. ChildProcess -> Readable () (cp :: CHILD_PROCESS | eff)
+stderr :: ChildProcess -> Readable ()
 stderr = unsafeFromNullable (missingStream "stderr") <<< _.stderr <<< runChildProcess
 
 missingStream :: String -> String
@@ -119,23 +119,40 @@ foreign import unsafeFromNullable :: forall a. String -> Nullable a -> a
 pid :: ChildProcess -> Pid
 pid = _.pid <<< runChildProcess
 
-connected :: forall eff. ChildProcess -> Eff (cp :: CHILD_PROCESS | eff) Boolean
-connected (ChildProcess cp) = mkEff \_ -> cp.connected
+-- | Indicates whether it is still possible to send and receive
+-- | messages from the child process.
+connected :: ChildProcess -> Effect Boolean
+connected (ChildProcess cp) = mkEffect \_ -> cp.connected
 
-send :: forall eff props. { | props } -> Handle -> ChildProcess -> Eff (cp :: CHILD_PROCESS | eff) Boolean
-send msg handle (ChildProcess cp) = mkEff \_ -> runFn2 cp.send msg handle
+-- | Send messages to the (`nodejs`) child process.
+-- |
+-- | See the [node documentation](https://nodejs.org/api/child_process.html#child_process_subprocess_send_message_sendhandle_options_callback)
+-- | for in-depth documentation.
+send
+  :: forall props
+   . { | props }
+  -> Handle
+  -> ChildProcess
+  -> Effect Boolean
+send msg handle (ChildProcess cp) = mkEffect \_ -> runFn2 cp.send msg handle
 
-disconnect :: forall eff. ChildProcess -> Eff (cp :: CHILD_PROCESS | eff) Unit
+-- | Closes the IPC channel between parent and child.
+disconnect :: ChildProcess -> Effect Unit
 disconnect = _.disconnect <<< runChildProcess
 
--- | Send a signal to a child process. It's an unfortunate historical decision
--- | that this function is called "kill", as sending a signal to a child
--- | process won't necessarily kill it.
-kill :: forall eff. Signal -> ChildProcess -> Eff (cp :: CHILD_PROCESS | eff) Boolean
-kill sig (ChildProcess cp) = mkEff \_ -> cp.kill (Signal.toString sig)
+-- | Send a signal to a child process. In the same way as the
+-- | [unix kill(2) system call](https://linux.die.net/man/2/kill),
+-- | sending a signal to a child process won't necessarily kill it.
+-- |
+-- | The resulting effects of this function depend on the process
+-- | and the signal. They can vary from system to system.
+-- | The child process might emit an `"error"` event if the signal
+-- | could not be delivered.
+kill :: Signal -> ChildProcess -> Effect Unit
+kill sig (ChildProcess cp) = mkEffect \_ -> cp.kill (Signal.toString sig)
 
-mkEff :: forall eff a. (Unit -> a) -> Eff eff a
-mkEff = unsafeCoerce
+mkEffect :: forall a. (Unit -> a) -> Effect a
+mkEffect = unsafeCoerce
 
 -- | Specifies how a child process exited; normally (with an exit code), or
 -- | due to a signal.
@@ -156,45 +173,68 @@ mkExit code signal =
   fromCode = toMaybe >>> map Normally
   fromSignal = toMaybe >=> Signal.fromString >>> map BySignal
 
-onExit :: forall eff. ChildProcess -> (Exit -> Eff eff Unit) -> Eff eff Unit
+-- | Handle the `"exit"` signal.
+onExit
+  :: ChildProcess
+  -> (Exit -> Effect Unit)
+  -> Effect Unit
 onExit = mkOnExit mkExit
 
 foreign import mkOnExit
-  :: forall eff
-   . (Nullable Int -> Nullable String -> Exit)
+  :: (Nullable Int -> Nullable String -> Exit)
   -> ChildProcess
-  -> (Exit -> Eff eff Unit)
-  -> Eff eff Unit
+  -> (Exit -> Effect Unit)
+  -> Effect Unit
 
-onClose :: forall eff. ChildProcess -> (Exit -> Eff eff Unit) -> Eff eff Unit
+-- | Handle the `"close"` signal.
+onClose
+  :: ChildProcess
+  -> (Exit -> Effect Unit)
+  -> Effect Unit
 onClose = mkOnClose mkExit
 
 foreign import mkOnClose
-  :: forall eff
-   . (Nullable Int -> Nullable String -> Exit)
+  :: (Nullable Int -> Nullable String -> Exit)
   -> ChildProcess
-  -> (Exit -> Eff eff Unit)
-  -> Eff eff Unit
+  -> (Exit -> Effect Unit)
+  -> Effect Unit
 
-onMessage :: forall eff. ChildProcess -> (Foreign -> Maybe Handle -> Eff eff Unit) -> Eff eff Unit
+-- | Handle the `"message"` signal.
+onMessage
+  :: ChildProcess
+  -> (Foreign -> Maybe Handle -> Effect Unit)
+  -> Effect Unit
 onMessage = mkOnMessage Nothing Just
 
 foreign import mkOnMessage
-  :: forall a eff
+  :: forall a
    . Maybe a
   -> (a -> Maybe a)
   -> ChildProcess
-  -> (Foreign -> Maybe Handle -> Eff eff Unit)
-  -> Eff eff Unit
+  -> (Foreign -> Maybe Handle -> Effect Unit)
+  -> Effect Unit
 
-foreign import onDisconnect :: forall eff. ChildProcess -> Eff eff Unit -> Eff eff Unit
-foreign import onError :: forall eff. ChildProcess -> (Error -> Eff eff Unit) -> Eff eff Unit
+-- | Handle the `"disconnect"` signal.
+foreign import onDisconnect
+  :: ChildProcess
+  -> Effect Unit
+  -> Effect Unit
+
+-- | Handle the `"error"` signal.
+foreign import onError
+  :: ChildProcess
+  -> (Error -> Effect Unit)
+  -> Effect Unit
 
 -- | Spawn a child process. Note that, in the event that a child process could
 -- | not be spawned (for example, if the executable was not found) this will
 -- | not throw an error. Instead, the `ChildProcess` will be created anyway,
 -- | but it will immediately emit an 'error' event.
-spawn :: forall eff. String -> Array String -> SpawnOptions -> Eff (cp :: CHILD_PROCESS | eff) ChildProcess
+spawn
+  :: String
+  -> Array String
+  -> SpawnOptions
+  -> Effect ChildProcess
 spawn cmd args = spawnImpl cmd args <<< convertOpts
   where
   convertOpts opts =
@@ -206,20 +246,29 @@ spawn cmd args = spawnImpl cmd args <<< convertOpts
     , gid: fromMaybe undefined opts.gid
     }
 
-foreign import spawnImpl :: forall opts eff. String -> Array String -> { | opts } -> Eff (cp :: CHILD_PROCESS | eff) ChildProcess
+foreign import spawnImpl
+  :: forall opts
+   . String
+  -> Array String
+  -> { | opts }
+  -> Effect ChildProcess
 
 -- There's gotta be a better way.
 foreign import undefined :: forall a. a
 
+-- | Configuration of `spawn`. Fields set to `Nothing` will use
+-- | the node defaults.
 type SpawnOptions =
   { cwd :: Maybe String
   , stdio :: Array (Maybe StdIOBehaviour)
-  , env :: Maybe (StrMap String)
+  , env :: Maybe (Object String)
   , detached :: Boolean
   , uid :: Maybe Uid
   , gid :: Maybe Gid
   }
 
+-- | A default set of `SpawnOptions`. Everything is set to `Nothing`,
+-- | `detached` is `false` and `stdio` is `ChildProcess.pipe`.
 defaultSpawnOptions :: SpawnOptions
 defaultSpawnOptions =
   { cwd: Nothing
@@ -238,11 +287,10 @@ defaultSpawnOptions =
 -- | Note that the child process will be killed if the amount of output exceeds
 -- | a certain threshold (the default is defined by Node.js).
 exec
-  :: forall eff
-   . String
+  :: String
   -> ExecOptions
-  -> (ExecResult -> Eff (cp :: CHILD_PROCESS | eff) Unit)
-  -> Eff (cp :: CHILD_PROCESS | eff) Unit
+  -> (ExecResult -> Effect Unit)
+  -> Effect ChildProcess
 exec cmd opts callback =
   execImpl cmd (convertExecOptions opts) \err stdout' stderr' ->
     callback
@@ -252,21 +300,19 @@ exec cmd opts callback =
       }
 
 foreign import execImpl
-  :: forall eff
-   . String
+  :: String
   -> ActualExecOptions
-  -> (Nullable Exception.Error -> Buffer -> Buffer -> Eff (cp :: CHILD_PROCESS | eff) Unit)
-  -> Eff (cp :: CHILD_PROCESS | eff) Unit
+  -> (Nullable Exception.Error -> Buffer -> Buffer -> Effect Unit)
+  -> Effect ChildProcess
 
 -- | Like `exec`, except instead of using a shell, it passes the arguments
 -- | directly to the specified command.
 execFile
-  :: forall eff
-   .  String
+  :: String
   -> Array String
   -> ExecOptions
-  -> (ExecResult -> Eff (cp :: CHILD_PROCESS | eff) Unit)
-  -> Eff (cp :: CHILD_PROCESS | eff) Unit
+  -> (ExecResult -> Effect Unit)
+  -> Effect ChildProcess
 execFile cmd args opts callback =
   execFileImpl cmd args (convertExecOptions opts) \err stdout' stderr' ->
     callback
@@ -276,12 +322,11 @@ execFile cmd args opts callback =
       }
 
 foreign import execFileImpl
-  :: forall eff
-   . String
+  :: String
   -> Array String
   -> ActualExecOptions
-  -> (Nullable Exception.Error -> Buffer -> Buffer -> Eff (cp :: CHILD_PROCESS | eff) Unit)
-  -> Eff (cp :: CHILD_PROCESS | eff) Unit
+  -> (Nullable Exception.Error -> Buffer -> Buffer -> Effect Unit)
+  -> Effect ChildProcess
 
 foreign import data ActualExecOptions :: Type
 
@@ -296,9 +341,11 @@ convertExecOptions opts = unsafeCoerce
   , gid: fromMaybe undefined opts.gid
   }
 
+-- | Configuration of `exec`. Fields set to `Nothing`
+-- | will use the node defaults.
 type ExecOptions =
   { cwd :: Maybe String
-  , env :: Maybe (StrMap String)
+  , env :: Maybe (Object String)
   , timeout :: Maybe Number
   , maxBuffer :: Maybe Int
   , killSignal :: Maybe Signal
@@ -306,6 +353,7 @@ type ExecOptions =
   , gid :: Maybe Gid
   }
 
+-- | A default set of `ExecOptions`. Everything is set to `Nothing`.
 defaultExecOptions :: ExecOptions
 defaultExecOptions =
   { cwd: Nothing
@@ -317,16 +365,92 @@ defaultExecOptions =
   , gid: Nothing
   }
 
+-- | The combined output of a process calld with `exec`.
 type ExecResult =
   { stderr :: Buffer
   , stdout :: Buffer
   , error :: Maybe Exception.Error
   }
 
+-- | Generally identical to `exec`, with the exception that
+-- | the method will not return until the child process has fully closed.
+-- | Returns: The stdout from the command.
+execSync
+  :: String
+  -> ExecSyncOptions
+  -> Effect Buffer
+execSync cmd opts =
+  execSyncImpl cmd (convertExecSyncOptions opts)
+
+foreign import execSyncImpl
+  :: String
+  -> ActualExecSyncOptions
+  -> Effect Buffer
+
+-- | Generally identical to `execFile`, with the exception that
+-- | the method will not return until the child process has fully closed.
+-- | Returns: The stdout from the command.
+execFileSync
+  :: String
+  -> Array String
+  -> ExecSyncOptions
+  -> Effect Buffer
+execFileSync cmd args opts =
+  execFileSyncImpl cmd args (convertExecSyncOptions opts)
+
+foreign import execFileSyncImpl
+  :: String
+  -> Array String
+  -> ActualExecSyncOptions
+  -> Effect Buffer
+
+foreign import data ActualExecSyncOptions :: Type
+
+convertExecSyncOptions :: ExecSyncOptions -> ActualExecSyncOptions
+convertExecSyncOptions opts = unsafeCoerce
+  { cwd: fromMaybe undefined opts.cwd
+  , input: fromMaybe undefined opts.input
+  , stdio: toActualStdIOOptions opts.stdio
+  , env: fromMaybe undefined opts.env
+  , timeout: fromMaybe undefined opts.timeout
+  , maxBuffer: fromMaybe undefined opts.maxBuffer
+  , killSignal: fromMaybe undefined opts.killSignal
+  , uid: fromMaybe undefined opts.uid
+  , gid: fromMaybe undefined opts.gid
+  }
+
+type ExecSyncOptions =
+  { cwd :: Maybe String
+  , input :: Maybe String
+  , stdio :: Array (Maybe StdIOBehaviour)
+  , env :: Maybe (Object String)
+  , timeout :: Maybe Number
+  , maxBuffer :: Maybe Int
+  , killSignal :: Maybe Signal
+  , uid :: Maybe Uid
+  , gid :: Maybe Gid
+  }
+
+defaultExecSyncOptions :: ExecSyncOptions
+defaultExecSyncOptions =
+  { cwd: Nothing
+  , input: Nothing
+  , stdio: pipe
+  , env: Nothing
+  , timeout: Nothing
+  , maxBuffer: Nothing
+  , killSignal: Nothing
+  , uid: Nothing
+  , gid: Nothing
+  }
+
 -- | A special case of `spawn` for creating Node.js child processes. The first
 -- | argument is the module to be run, and the second is the argv (command line
 -- | arguments).
-foreign import fork :: forall eff. String -> Array String -> Eff (cp :: CHILD_PROCESS | eff) ChildProcess
+foreign import fork
+  :: String
+  -> Array String
+  -> Effect ChildProcess
 
 -- | An error which occurred inside a child process.
 type Error =
@@ -336,7 +460,7 @@ type Error =
   }
 
 -- | Convert a ChildProcess.Error to a standard Error, which can then be thrown
--- | inside an Eff or Aff computation (for example).
+-- | inside an Effect or Aff computation (for example).
 toStandardError :: Error -> Exception.Error
 toStandardError = unsafeCoerce
 
@@ -355,14 +479,15 @@ toStandardError = unsafeCoerce
 data StdIOBehaviour
   = Pipe
   | Ignore
-  | ShareStream (forall r eff. Stream r eff)
+  | ShareStream (forall r. Stream r)
   | ShareFD FS.FileDescriptor
 
 -- | Create pipes for each of the three standard IO streams.
 pipe :: Array (Maybe StdIOBehaviour)
 pipe = map Just [Pipe, Pipe, Pipe]
 
--- | Share stdin with stdin, stdout with stdout, and stderr with stderr.
+-- | Share `stdin` with `stdin`, `stdout` with `stdout`,
+-- | and `stderr` with `stderr`.
 inherit :: Array (Maybe StdIOBehaviour)
 inherit = map Just
   [ ShareStream process.stdin
@@ -375,6 +500,9 @@ foreign import process :: forall props. { | props }
 -- | Ignore all streams.
 ignore :: Array (Maybe StdIOBehaviour)
 ignore = map Just [Ignore, Ignore, Ignore]
+
+
+-- Helpers
 
 foreign import data ActualStdIOBehaviour :: Type
 

@@ -2,20 +2,17 @@ module Test.Main where
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE, log)
-import Control.Monad.Eff.Exception (EXCEPTION)
-
+import Data.Maybe (Maybe(..))
 import Data.Posix.Signal (Signal(..))
-
+import Effect (Effect)
+import Effect.Console (log)
 import Node.Buffer as Buffer
-import Node.ChildProcess (CHILD_PROCESS, Exit(..), defaultExecOptions, exec, onError, defaultSpawnOptions, spawn, stdout, onExit, kill)
+import Node.ChildProcess (Exit(..), defaultExecOptions, exec, defaultExecSyncOptions, execSync, onError, defaultSpawnOptions, spawn, stdout, onExit, kill)
 import Node.Encoding (Encoding(UTF8))
+import Node.Encoding as NE
 import Node.Stream (onData)
 
-type TestEff = Eff (cp :: CHILD_PROCESS, console :: CONSOLE, exception :: EXCEPTION, buffer :: Buffer.BUFFER) Unit
-
-main :: TestEff
+main :: Effect Unit
 main = do
   log "spawns processes ok"
   spawnLs
@@ -47,28 +44,27 @@ main = do
   log "exec"
   execLs
 
-spawnLs :: TestEff
+spawnLs :: Effect Unit
 spawnLs = do
   ls <- spawn "ls" ["-la"] defaultSpawnOptions
   onExit ls \exit ->
       log $ "ls exited: " <> show exit
   onData (stdout ls) (Buffer.toString UTF8 >=> log)
 
-nonExistentExecutable
-  :: forall eff
-   . Eff ( console :: CONSOLE
-         , cp :: CHILD_PROCESS
-         | eff
-         ) Unit
-  -> Eff ( cp :: CHILD_PROCESS
-         , console :: CONSOLE
-         | eff
-         ) Unit
+nonExistentExecutable :: Effect Unit -> Effect Unit
 nonExistentExecutable done = do
   ch <- spawn "this-does-not-exist" [] defaultSpawnOptions
   onError ch (\err -> log err.code *> done)
 
-execLs :: TestEff
+execLs :: Effect Unit
 execLs = do
-  exec "ls >&2" defaultExecOptions \r ->
+  -- returned ChildProcess is ignored here
+  _ <- exec "ls >&2" defaultExecOptions \r ->
     log "redirected to stderr:" *> (Buffer.toString UTF8 r.stderr >>= log)
+  pure unit
+
+execSyncEcho :: String -> Effect Unit
+execSyncEcho str = do
+  resBuf <- execSync "cat" (defaultExecSyncOptions {input = Just str})
+  res <- Buffer.toString NE.UTF8 resBuf
+  log res
