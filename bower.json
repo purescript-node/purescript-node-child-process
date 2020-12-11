@@ -21,7 +21,7 @@
     "purescript-functions": "master",
     "purescript-node-fs": "master",
     "purescript-node-streams": "master",
-    "purescript-nullable": "master",
+    "purescript-nullable": "main",
     "purescript-posix-types": "master",
     "purescript-unsafe-coerce": "master",
     "purescript-foreign-object": "master"
