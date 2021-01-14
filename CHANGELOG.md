@@ -12,9 +12,15 @@ Bugfixes:
 
 Other improvements:
 
+## [v7.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v7.0.0) - 2021-MONTH-DAY
+
+Other improvements:
+  - Migrated CI to GitHub Actions and updated installation instructions to use Spago (#24)
+  - Added a CHANGELOG.md file and pull request template (#26)
+
 ## [v6.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v6.0.0) - 2019-03-15
 
-Updated `purescript-foreign-object` dependency
+- Updated `purescript-foreign-object` dependency
 
 ## [v5.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v5.0.0) - 2018-06-02
 
@@ -32,7 +38,7 @@ Updates for 0.12
 
 ## [v4.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v4.0.0) - 2017-04-05
 
-Updates for 0.11 compiler
+- Updates for 0.11 compiler
 
 ## [v3.0.1](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v3.0.1) - 2016-11-19
 
@@ -48,11 +54,11 @@ Updates for 0.11 compiler
 
 ## [v1.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v1.0.0) - 2016-06-19
 
-Updates for 0.9.1 compiler and 1.0 core libraries.
+- Updates for 0.9.1 compiler and 1.0 core libraries.
 
 ## [v0.6.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v0.6.0) - 2016-03-31
 
-Bump dependencies (`purescript-node-streams` -> v0.4.0).
+- Bump dependencies (`purescript-node-streams` -> v0.4.0).
 
 ## [v0.5.1](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v0.5.1) - 2016-01-14
 
