@@ -14,6 +14,9 @@ Other improvements:
 
 ## [v7.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v7.0.0) - 2021-MONTH-DAY
 
+Breaking changes:
+  - Updated dependencies for PureScript 0.14 (#25)
+  
 Other improvements:
   - Migrated CI to GitHub Actions and updated installation instructions to use Spago (#24)
   - Added a CHANGELOG.md file and pull request template (#26)
@@ -24,7 +27,7 @@ Other improvements:
 
 ## [v5.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v5.0.0) - 2018-06-02
 
-Updates for 0.12
+- Updates for 0.12
 
 **Breaking**
 
@@ -81,7 +84,8 @@ Updates for 0.12
 
 - **Breaking change**:
   - `SpawnOptions` now uses the `Uid` and `Gid` types from `purescript-posix-types` for its `uid` and `gid` options, instead of `Int`.
-- **Additions**:
+  
+- **New features**:
   - Added `exec`.
 
 ## [v0.3.2](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v0.3.2) - 2015-12-27
@@ -114,4 +118,3 @@ Updates for 0.12
 - Update dependencies: `purescript-node-streams` -> `~0.3.0`
 
 See https://github.com/joneshf/purescript-node-child-process/issues/2 for the rationale behind many of these changes.
-
