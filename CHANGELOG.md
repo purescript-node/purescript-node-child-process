@@ -12,13 +12,22 @@ Bugfixes:
 
 Other improvements:
 
+## [v7.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v7.0.0) - 2021-MONTH-DAY
+
+Breaking changes:
+  - Updated dependencies for PureScript 0.14 (#25)
+  
+Other improvements:
+  - Migrated CI to GitHub Actions and updated installation instructions to use Spago (#24)
+  - Added a CHANGELOG.md file and pull request template (#26)
+
 ## [v6.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v6.0.0) - 2019-03-15
 
-Updated `purescript-foreign-object` dependency
+- Updated `purescript-foreign-object` dependency
 
 ## [v5.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v5.0.0) - 2018-06-02
 
-Updates for 0.12
+- Updates for 0.12
 
 **Breaking**
 
@@ -32,7 +41,7 @@ Updates for 0.12
 
 ## [v4.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v4.0.0) - 2017-04-05
 
-Updates for 0.11 compiler
+- Updates for 0.11 compiler
 
 ## [v3.0.1](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v3.0.1) - 2016-11-19
 
@@ -48,11 +57,11 @@ Updates for 0.11 compiler
 
 ## [v1.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v1.0.0) - 2016-06-19
 
-Updates for 0.9.1 compiler and 1.0 core libraries.
+- Updates for 0.9.1 compiler and 1.0 core libraries.
 
 ## [v0.6.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v0.6.0) - 2016-03-31
 
-Bump dependencies (`purescript-node-streams` -> v0.4.0).
+- Bump dependencies (`purescript-node-streams` -> v0.4.0).
 
 ## [v0.5.1](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v0.5.1) - 2016-01-14
 
@@ -75,7 +84,8 @@ Bump dependencies (`purescript-node-streams` -> v0.4.0).
 
 - **Breaking change**:
   - `SpawnOptions` now uses the `Uid` and `Gid` types from `purescript-posix-types` for its `uid` and `gid` options, instead of `Int`.
-- **Additions**:
+  
+- **New features**:
   - Added `exec`.
 
 ## [v0.3.2](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v0.3.2) - 2015-12-27
@@ -108,4 +118,3 @@ Bump dependencies (`purescript-node-streams` -> v0.4.0).
 - Update dependencies: `purescript-node-streams` -> `~0.3.0`
 
 See https://github.com/joneshf/purescript-node-child-process/issues/2 for the rationale behind many of these changes.
-
