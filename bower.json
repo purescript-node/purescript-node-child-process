@@ -4,7 +4,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git://github.com/purescript-node/purescript-node-child-process"
+    "url": "https://github.com/purescript-node/purescript-node-child-process.git"
   },
   "ignore": [
     "**/.*",
