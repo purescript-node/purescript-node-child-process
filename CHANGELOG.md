@@ -8,11 +8,15 @@ Breaking changes:
 
 New features:
 
-- Added `shell` and `encoding` options to `exec` functions (#29 by @thomashoneyman)
-
 Bugfixes:
 
 Other improvements:
+
+## [v7.1.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v7.1.0) - 2021-07-13
+
+New features:
+
+- Added `shell` and `encoding` options to `exec` functions (#29 by @thomashoneyman)
 
 ## [v7.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v7.0.0) - 2021-02-26
 
