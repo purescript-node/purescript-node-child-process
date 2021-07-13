@@ -53,7 +53,7 @@ import Prelude
 
 import Control.Alt ((<|>))
 import Data.Function.Uncurried (Fn2, runFn2)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Nullable (Nullable, toNullable, toMaybe)
 import Data.Posix (Pid, Gid, Uid)
 import Data.Posix.Signal (Signal)
@@ -64,6 +64,7 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import Foreign (Foreign)
 import Foreign.Object (Object)
 import Node.Buffer (Buffer)
+import Node.Encoding (Encoding, encodingToNode)
 import Node.FS as FS
 import Node.Stream (Readable, Writable, Stream)
 import Unsafe.Coerce (unsafeCoerce)
@@ -334,6 +335,8 @@ convertExecOptions :: ExecOptions -> ActualExecOptions
 convertExecOptions opts = unsafeCoerce
   { cwd: fromMaybe undefined opts.cwd
   , env: fromMaybe undefined opts.env
+  , encoding: maybe undefined encodingToNode opts.encoding
+  , shell: fromMaybe undefined opts.shell
   , timeout: fromMaybe undefined opts.timeout
   , maxBuffer: fromMaybe undefined opts.maxBuffer
   , killSignal: fromMaybe undefined opts.killSignal
@@ -346,6 +349,8 @@ convertExecOptions opts = unsafeCoerce
 type ExecOptions =
   { cwd :: Maybe String
   , env :: Maybe (Object String)
+  , encoding :: Maybe Encoding
+  , shell :: Maybe String
   , timeout :: Maybe Number
   , maxBuffer :: Maybe Int
   , killSignal :: Maybe Signal
@@ -358,6 +363,8 @@ defaultExecOptions :: ExecOptions
 defaultExecOptions =
   { cwd: Nothing
   , env: Nothing
+  , encoding: Nothing
+  , shell: Nothing
   , timeout: Nothing
   , maxBuffer: Nothing
   , killSignal: Nothing

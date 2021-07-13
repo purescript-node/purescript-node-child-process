@@ -8,6 +8,8 @@ Breaking changes:
 
 New features:
 
+- Added `shell` and `encoding` options to `exec` functions (#29 by @thomashoneyman)
+
 Bugfixes:
 
 Other improvements:
@@ -15,11 +17,13 @@ Other improvements:
 ## [v7.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v7.0.0) - 2021-02-26
 
 Breaking changes:
-  - Updated dependencies for PureScript 0.14 (#25)
-  
+
+- Updated dependencies for PureScript 0.14 (#25)
+
 Other improvements:
-  - Migrated CI to GitHub Actions and updated installation instructions to use Spago (#24)
-  - Added a CHANGELOG.md file and pull request template (#26)
+
+- Migrated CI to GitHub Actions and updated installation instructions to use Spago (#24)
+- Added a CHANGELOG.md file and pull request template (#26)
 
 ## [v6.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v6.0.0) - 2019-03-15
 
@@ -83,8 +87,9 @@ Other improvements:
 ## [v0.4.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v0.4.0) - 2015-12-29
 
 - **Breaking change**:
+
   - `SpawnOptions` now uses the `Uid` and `Gid` types from `purescript-posix-types` for its `uid` and `gid` options, instead of `Int`.
-  
+
 - **New features**:
   - Added `exec`.
 

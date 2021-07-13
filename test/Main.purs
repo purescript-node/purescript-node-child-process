@@ -23,7 +23,7 @@ main = do
 
   log "doesn't perform effects too early"
   spawn "ls" ["-la"] defaultSpawnOptions >>= \ls -> do
-    let unused = kill SIGTERM ls
+    let _ = kill SIGTERM ls
     onExit ls \exit ->
       case exit of
         Normally 0 ->
