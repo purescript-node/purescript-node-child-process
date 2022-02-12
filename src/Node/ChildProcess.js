@@ -2,7 +2,7 @@
 
 /* eslint-env node*/
 
-import { spawn, exec, execFile, execSync, execFileSync, fork } from 'child_process';
+import { spawn, exec, execFile, execSync, execFileSync, fork as cp_fork } from 'child_process';
 
 export function unsafeFromNullable(msg) {
   return x => {
@@ -45,7 +45,7 @@ export function execFileSyncImpl(command) {
 }
 
 export function fork(cmd) {
-  return args => () => fork(cmd, args);
+  return args => () => cp_fork(cmd, args);
 }
 
 export function mkOnExit(mkChildExit) {
