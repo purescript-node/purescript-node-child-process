@@ -2,14 +2,14 @@
 
 /* eslint-env node*/
 
-exports.unsafeFromNullable = function unsafeFromNullable(msg) {
+export function unsafeFromNullable(msg) {
   return function (x) {
     if (x === null) throw new Error(msg);
     return x;
   };
-};
+}
 
-exports.spawnImpl = function spawnImpl(command) {
+export function spawnImpl(command) {
   return function (args) {
     return function (opts) {
       return function () {
@@ -17,9 +17,9 @@ exports.spawnImpl = function spawnImpl(command) {
       };
     };
   };
-};
+}
 
-exports.execImpl = function execImpl(command) {
+export function execImpl(command) {
   return function (opts) {
     return function (callback) {
       return function () {
@@ -33,7 +33,7 @@ exports.execImpl = function execImpl(command) {
       };
     };
   };
-};
+}
 
 exports.execFileImpl = function execImpl(command) {
   return function (args) {
@@ -54,15 +54,15 @@ exports.execFileImpl = function execImpl(command) {
   };
 };
 
-exports.execSyncImpl = function execSyncImpl(command) {
+export function execSyncImpl(command) {
   return function (opts) {
     return function () {
       return require("child_process").execSync(command, opts);
     };
   };
-};
+}
 
-exports.execFileSyncImpl = function execFileSyncImpl(command) {
+export function execFileSyncImpl(command) {
   return function (args) {
     return function (opts) {
       return function () {
@@ -70,17 +70,17 @@ exports.execFileSyncImpl = function execFileSyncImpl(command) {
       };
     };
   };
-};
+}
 
-exports.fork = function fork(cmd) {
+export function fork(cmd) {
   return function (args) {
     return function () {
       return require("child_process").fork(cmd, args);
     };
   };
-};
+}
 
-exports.mkOnExit = function mkOnExit(mkChildExit) {
+export function mkOnExit(mkChildExit) {
   return function onExit(cp) {
     return function (cb) {
       return function () {
@@ -90,9 +90,9 @@ exports.mkOnExit = function mkOnExit(mkChildExit) {
       };
     };
   };
-};
+}
 
-exports.mkOnClose = function mkOnClose(mkChildExit) {
+export function mkOnClose(mkChildExit) {
   return function onClose(cp) {
     return function (cb) {
       return function () {
@@ -102,17 +102,17 @@ exports.mkOnClose = function mkOnClose(mkChildExit) {
       };
     };
   };
-};
+}
 
-exports.onDisconnect = function onDisconnect(cp) {
+export function onDisconnect(cp) {
   return function (cb) {
     return function () {
       cp.on("disconnect", cb);
     };
   };
-};
+}
 
-exports.mkOnMessage = function mkOnMessage(nothing) {
+export function mkOnMessage(nothing) {
   return function (just) {
     return function onMessage(cp) {
       return function (cb) {
@@ -124,9 +124,9 @@ exports.mkOnMessage = function mkOnMessage(nothing) {
       };
     };
   };
-};
+}
 
-exports.onError = function onError(cp) {
+export function onError(cp) {
   return function (cb) {
     return function () {
       cp.on("error", function (err) {
@@ -134,7 +134,8 @@ exports.onError = function onError(cp) {
       });
     };
   };
-};
+}
 
-exports.undefined = undefined;
-exports.process = process;
+const _undefined = undefined;
+export { _undefined as undefined };
+export {process};
