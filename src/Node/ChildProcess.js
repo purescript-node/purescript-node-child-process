@@ -25,7 +25,7 @@ export function execImpl(command) {
   );
 }
 
-exports.execFileImpl = function execImpl(command) {
+export const execFileImpl = function execImpl(command) {
   return args => opts => callback => () => execFile(
     command,
     args,
