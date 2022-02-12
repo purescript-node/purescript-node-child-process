@@ -94,5 +94,5 @@ export function onError(cp) {
 
 const _undefined = undefined;
 export { _undefined as undefined };
-import { process } from 'process';
+import process from 'process';
 export { process };
