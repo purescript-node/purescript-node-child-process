@@ -1,6 +1,7 @@
 "use strict";
 
 /* eslint-env node*/
+import childProcess from "child_process";
 
 export function unsafeFromNullable(msg) {
   return function (x) {
@@ -13,7 +14,7 @@ export function spawnImpl(command) {
   return function (args) {
     return function (opts) {
       return function () {
-        return require("child_process").spawn(command, args, opts);
+        return childProcess.spawn(command, args, opts);
       };
     };
   };
@@ -23,7 +24,7 @@ export function execImpl(command) {
   return function (opts) {
     return function (callback) {
       return function () {
-        return require("child_process").exec(
+        return childProcess.exec(
           command,
           opts,
           function (err, stdout, stderr) {
@@ -35,12 +36,12 @@ export function execImpl(command) {
   };
 }
 
-exports.execFileImpl = function execImpl(command) {
+export function execImpl(command) {
   return function (args) {
     return function (opts) {
       return function (callback) {
         return function () {
-          return require("child_process").execFile(
+          return childProcess.execFile(
             command,
             args,
             opts,
@@ -57,7 +58,7 @@ exports.execFileImpl = function execImpl(command) {
 export function execSyncImpl(command) {
   return function (opts) {
     return function () {
-      return require("child_process").execSync(command, opts);
+      return childProcess.execSync(command, opts);
     };
   };
 }
@@ -66,7 +67,7 @@ export function execFileSyncImpl(command) {
   return function (args) {
     return function (opts) {
       return function () {
-        return require("child_process").execFileSync(command, args, opts);
+        return childProcess.execFileSync(command, args, opts);
       };
     };
   };
@@ -75,7 +76,7 @@ export function execFileSyncImpl(command) {
 export function fork(cmd) {
   return function (args) {
     return function () {
-      return require("child_process").fork(cmd, args);
+      return childProcess.fork(cmd, args);
     };
   };
 }
@@ -136,5 +137,5 @@ export function onError(cp) {
   };
 }
 
-export {undefined};
-export {process};
+export { undefined };
+export { process };
