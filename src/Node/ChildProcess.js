@@ -1,6 +1,6 @@
 /* eslint-env node*/
 
-import { spawn, exec, execFile, execSync, execFileSync, fork as cp_fork } from 'child_process';
+import { spawn, exec, execFile, execSync, execFileSync, fork as cp_fork } from "child_process";
 
 export function unsafeFromNullable(msg) {
   return x => {
@@ -92,5 +92,5 @@ export function onError(cp) {
 
 const _undefined = undefined;
 export { _undefined as undefined };
-import process from 'process';
+import process from "process";
 export { process };
