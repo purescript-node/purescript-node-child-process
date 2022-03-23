@@ -1,5 +1,3 @@
-"use strict";
-
 /* eslint-env node*/
 
 import { spawn, exec, execFile, execSync, execFileSync, fork as cp_fork } from 'child_process';
