@@ -20,10 +20,10 @@
     "purescript-foreign": "master",
     "purescript-foreign-object": "master",
     "purescript-functions": "master",
-    "purescript-node-fs": "^6.0.0",
-    "purescript-node-streams": "^5.0.0",
+    "purescript-node-fs": "master",
+    "purescript-node-streams": "master",
     "purescript-nullable": "main",
-    "purescript-posix-types": "^5.0.0",
+    "purescript-posix-types": "master",
     "purescript-unsafe-coerce": "master"
   },
   "devDependencies": {
