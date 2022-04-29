@@ -12,16 +12,14 @@ Bugfixes:
 
 Other improvements:
 
-## [v8.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v8.0.0) - 2022-04-27
+## [v9.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v9.0.0) - 2022-04-29
 
 Breaking changes:
 - Update project and deps to PureScript v0.15.0 (#31 by @JordanMartinez, @thomashoneyman, @sigma-andex)
 
-New features:
+## [v8.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v8.0.0) - 2022-04-27
 
-Bugfixes:
-
-Other improvements:
+Due to an incorrectly-made breaking change, please use v8.0.0 instead.
 
 ## [v7.1.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v7.1.0) - 2021-07-13
 
