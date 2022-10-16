@@ -15,8 +15,10 @@
   , "node-streams"
   , "node-streams-aff"
   , "nullable"
+  , "parallel"
   , "posix-types"
   , "prelude"
+  , "tuples"
   , "unsafe-coerce"
   ]
 , packages = ./packages.dhall

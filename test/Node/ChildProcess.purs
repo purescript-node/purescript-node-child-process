@@ -8,7 +8,7 @@ import Data.Either (Either(Left, Right))
 import Control.Parallel (parSequence_)
 import Effect (Effect)
 import Effect.Console (log)
-import Effect.Aff (Aff, makeAff, nonCanceler)
+import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Effect.Exception (Error, error)
 import Node.Buffer as Buffer
@@ -16,9 +16,7 @@ import Node.ChildProcess (Exit(..), defaultExecOptions, exec, defaultExecSyncOpt
 import Node.Encoding (Encoding(UTF8))
 import Node.Encoding as NE
 import Node.Stream (onData)
-
-makeNonCancelerAff :: forall a b. ((Either Error a -> Effect Unit) -> Effect b) -> Aff a
-makeNonCancelerAff handler = makeAff (\cb -> handler cb *> pure nonCanceler)
+import Test.Internal (makeNonCancelerAff)
 
 test :: Aff Unit
 test = do
