@@ -10,26 +10,25 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: latest
+          cache: 'npm'
 
       - uses: purescript-contrib/setup-purescript@main
-        with:
-          purescript: "unstable"
 
-      - uses: actions/setup-node@v2
+      - name: Cache PureScript dependencies
+        uses: actions/cache@v2
         with:
-          node-version: "14"
-
-      - name: Install dependencies
-        run: |
-          npm install -g bower
-          npm install
-          bower install --production
+          key: ${{ runner.os }}-spago-${{ hashFiles('**/*.dhall') }}
+          path: |
+            .spago
+            output
 
       - name: Build source
-        run: npm run-script build
+        run: npm run build
 
       - name: Run tests
-        run: |
-          bower install
-          npm run-script test --if-present
+        run: npm run test -- --no-install

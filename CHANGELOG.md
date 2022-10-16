@@ -11,6 +11,7 @@ New features:
 Bugfixes:
 
 Other improvements:
+- Move from pulp to spago (#35)
 
 ## [v9.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v9.0.0) - 2022-04-29
 
