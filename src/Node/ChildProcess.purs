@@ -38,18 +38,25 @@ module Node.ChildProcess
   , ignore
   , Shell(..)
   , spawn
+  , spawn'
   , SpawnOptions
   , spawnSync
+  , spawnSync'
   , SpawnSyncOptions
   , exec
+  , exec'
   , ExecOptions
   , execFile
+  , execFile'
   , ExecFileOptions
   , execSync
-  , execFileSync
-  , ExecFileSyncOptions
+  , execSync'
   , ExecSyncOptions
+  , execFileSync
+  , execFileSync'
+  , ExecFileSyncOptions
   , fork
+  , fork'
   , ForkOptions
   , spawnFile
   , spawnArgs
@@ -295,6 +302,9 @@ type JsExecAsyncOptions =
 -- | either Int or String
 foreign import data KillSignal :: Type
 
+exec :: String -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect ChildProcess
+exec cmd = exec' cmd identity
+
 -- | Similar to `spawn`, except that this variant will:
 -- | * run the given command with the shell,
 -- | * buffer output, and wait until the process has exited before calling the
@@ -302,8 +312,8 @@ foreign import data KillSignal :: Type
 -- |
 -- | Note that the child process will be killed if the amount of output exceeds
 -- | a certain threshold (the default is defined by Node.js).
-exec :: String -> (ExecOptions -> ExecOptions) -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect ChildProcess
-exec cmd buildOptions cb = runEffectFn3 execImpl cmd jsOptions $ mkEffectFn3 \err stdOUT stdERR ->
+exec' :: String -> (ExecOptions -> ExecOptions) -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect ChildProcess
+exec' cmd buildOptions cb = runEffectFn3 execImpl cmd jsOptions $ mkEffectFn3 \err stdOUT stdERR ->
   cb { error: toMaybe err, stdout: stdOUT, stderr: stdERR }
   where
   options = buildOptions defaults
@@ -378,10 +388,13 @@ type JsExecFileAsyncOptions =
   , windowsVerbatimArguments :: Boolean
   }
 
+execFile :: String -> Array String -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect ChildProcess
+execFile file args = execFile' file args identity
+
 -- | Like `exec`, except instead of using a shell, it passes the arguments
 -- | directly to the specified command.
-execFile :: String -> Array String -> (ExecFileOptions -> ExecFileOptions) -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect ChildProcess
-execFile file args buildOptions cb = runEffectFn4 execFileImpl file args jsOptions $ mkEffectFn3 \err stdOUT stdERR ->
+execFile' :: String -> Array String -> (ExecFileOptions -> ExecFileOptions) -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect ChildProcess
+execFile' file args buildOptions cb = runEffectFn4 execFileImpl file args jsOptions $ mkEffectFn3 \err stdOUT stdERR ->
   cb { error: toMaybe err, stdout: stdOUT, stderr: stdERR }
   where
   options = buildOptions defaults
@@ -451,11 +464,14 @@ type JsExecSyncOptions =
   , windowsHide :: Boolean
   }
 
+execSync :: String -> Effect ImmutableBuffer
+execSync cmd = execSync' cmd identity
+
 -- | Generally identical to `exec`, with the exception that
 -- | the method will not return until the child process has fully closed.
 -- | Returns: The stdout from the command.
-execSync :: String -> (ExecSyncOptions -> ExecSyncOptions) -> Effect ImmutableBuffer
-execSync cmd buildOptions = runEffectFn2 execSyncImpl cmd jsOptions
+execSync' :: String -> (ExecSyncOptions -> ExecSyncOptions) -> Effect ImmutableBuffer
+execSync' cmd buildOptions = runEffectFn2 execSyncImpl cmd jsOptions
   where
   options = buildOptions defaults
   jsOptions =
@@ -521,11 +537,14 @@ type JsExecFileSyncOptions =
   , shell :: String
   }
 
+execFileSync :: String -> Array String -> Effect ChildProcess
+execFileSync file args = execFileSync' file args identity
+
 -- | Generally identical to `execFile`, with the exception that
 -- | the method will not return until the child process has fully closed.
 -- | Returns: The stdout from the command.
-execFileSync :: String -> Array String -> (ExecFileSyncOptions -> ExecFileSyncOptions) -> Effect ChildProcess
-execFileSync file args buildOptions = runEffectFn3 execFileSyncImpl file args jsOptions
+execFileSync' :: String -> Array String -> (ExecFileSyncOptions -> ExecFileSyncOptions) -> Effect ChildProcess
+execFileSync' file args buildOptions = runEffectFn3 execFileSyncImpl file args jsOptions
   where
   options = buildOptions defaults
   jsOptions =
@@ -594,12 +613,15 @@ type JsSpawnAsyncOptions =
   , killSignal :: KillSignal
   }
 
+spawn :: String -> Array String -> Effect ChildProcess
+spawn file args = spawn' file args identity
+
 -- | Spawn a child process. Note that, in the event that a child process could
 -- | not be spawned (for example, if the executable was not found) this will
 -- | not throw an error. Instead, the `ChildProcess` will be created anyway,
 -- | but it will immediately emit an 'error' event.
-spawn :: String -> Array String -> (SpawnOptions -> SpawnOptions) -> Effect ChildProcess
-spawn file args buildOptions = runEffectFn3 spawnImpl file args jsOptions
+spawn' :: String -> Array String -> (SpawnOptions -> SpawnOptions) -> Effect ChildProcess
+spawn' file args buildOptions = runEffectFn3 spawnImpl file args jsOptions
   where
   options = buildOptions defaults
   jsOptions =
@@ -674,8 +696,11 @@ type JsSpawnSyncOptions =
   , windowsHide :: Boolean
   }
 
-spawnSync :: String -> Array String -> (SpawnSyncOptions -> SpawnSyncOptions) -> Effect ChildProcess
-spawnSync file args buildOptions = runEffectFn3 spawnSyncImpl file args jsOptions
+spawnSync :: String -> Array String -> Effect ChildProcess
+spawnSync file args = spawnSync' file args identity
+
+spawnSync' :: String -> Array String -> (SpawnSyncOptions -> SpawnSyncOptions) -> Effect ChildProcess
+spawnSync' file args buildOptions = runEffectFn3 spawnSyncImpl file args jsOptions
   where
   options = buildOptions defaults
   jsOptions =
@@ -747,11 +772,14 @@ type JsForkOptions =
   , timeout :: Int
   }
 
+fork :: String -> Array String -> Effect ChildProcess
+fork modulePath args = fork' modulePath args identity
+
 -- | A special case of `spawn` for creating Node.js child processes. The first
 -- | argument is the module to be run, and the second is the argv (command line
 -- | arguments).
-fork :: String -> Array String -> (ForkOptions -> ForkOptions) -> Effect ChildProcess
-fork modulePath args buildOptions = runEffectFn3 forkImpl modulePath args jsOptions
+fork' :: String -> Array String -> (ForkOptions -> ForkOptions) -> Effect ChildProcess
+fork' modulePath args buildOptions = runEffectFn3 forkImpl modulePath args jsOptions
   where
   options = buildOptions defaults
   jsOptions =
