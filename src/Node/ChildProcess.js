@@ -1,93 +1,121 @@
 /* eslint-env node*/
 
-import { spawn, exec, execFile, execSync, execFileSync, fork as cp_fork } from "child_process";
+export { 
+  spawn as spawnImpl, 
+  spawnSync as spawnSyncImpl,
+  exec as execImpl, 
+  execFile as execFileImpl, 
+  execSync as execSyncImpl, 
+  execFileSync as execFileSyncImpl, 
+  fork as forkImpl 
+} from "node:child_process";
 
-export function unsafeFromNullable(msg) {
-  return x => {
-    if (x === null) throw new Error(msg);
-    return x;
-  };
+export function channelImpl(cp) {
+  return cp.channel;
 }
 
-export function spawnImpl(command) {
-  return args => opts => () => spawn(command, args, opts);
+export function connectedImpl(cp) {
+  return cp.connected;
 }
 
-export function execImpl(command) {
-  return opts => callback => () => exec(
-    command,
-    opts,
-    (err, stdout, stderr) => {
-      callback(err)(stdout)(stderr)();
-    }
-  );
+export function disconnectImpl(cp) {
+  return cp.disconnect();
 }
 
-export const execFileImpl = function execImpl(command) {
-  return args => opts => callback => () => execFile(
-    command,
-    args,
-    opts,
-    (err, stdout, stderr) => {
-      callback(err)(stdout)(stderr)();
-    }
-  );
-};
-
-export function execSyncImpl(command) {
-  return opts => () => execSync(command, opts);
+export function exitCodeImpl(cp) {
+  return cp.exitCode;
 }
 
-export function execFileSyncImpl(command) {
-  return args => opts => () => execFileSync(command, args, opts);
+export function killImpl(signal, cp) {
+  return cp.kill(signal);
 }
 
-export function fork(cmd) {
-  return args => () => cp_fork(cmd, args);
+export function pidExistsImpl(cp) {
+  return cp.kill(0);
 }
 
-export function mkOnExit(mkChildExit) {
-  return function onExit(cp) {
-    return cb => () => {
-      cp.on("exit", (code, signal) => {
-        cb(mkChildExit(code)(signal))();
-      });
-    };
-  };
+export function killedImpl(cp) {
+  return cp.killed;
 }
 
-export function mkOnClose(mkChildExit) {
-  return function onClose(cp) {
-    return cb => () => {
-      cp.on("close", (code, signal) => {
-        cb(mkChildExit(code)(signal))();
-      });
-    };
-  };
+export function pidImpl(cp) {
+  return cp.pid;
 }
 
-export function onDisconnect(cp) {
-  return cb => () => {
-    cp.on("disconnect", cb);
-  };
+export function refImpl(cp) {
+  return cp.ref();
 }
 
-export function mkOnMessage(nothing) {
-  return just => (function onMessage(cp) {
-    return cb => () => {
-      cp.on("message", (mess, sendHandle) => {
-        cb(mess, sendHandle ? just(sendHandle) : nothing)();
-      });
-    };
-  });
+export function unrefImpl(cp) {
+  return cp.unref();
 }
 
-export function onError(cp) {
-  return cb => () => {
-    cp.on("error", err => {
-      cb(err)();
-    });
-  };
+export function sendImpl(cp, msg, handle, options, cb) {
+  return cp.send(msg, handle, options, cb);
+}
+
+export function signalCodeImpl(cp) {
+  return cp.signalCode;
+}
+
+export function spawnArgs(cp) {
+  return cp.spawnArgs;
+}
+
+export function spawnFile(cp) {
+  return cp.spawnFile;
+}
+
+export function stderrImpl(cp) {
+  return cp.stderr;
+}
+
+export function stdinImpl(cp) {
+  return cp.stdin;
+}
+
+export function stdioImpl(cp) {
+  return cp.stdio;
+}
+
+export function stdoutImpl(cp) {
+  return cp.stdout;
+}
+
+export function stdinImpl(cp) {
+  return cp.stdin;
+}
+
+export function stdoutImpl(cp) {
+  return cp.stdout;
+}
+
+export function stderrImpl(cp) {
+  return cp.stderr;
+}
+
+export function onCloseImpl(cp, cb) {
+  return cp.on("close", cb);
+}
+
+export function onDisconnectImpl(cp, cb) {
+  return cp.on("disconnect", cb);
+}
+
+export function onErrorImpl(cp, cb) {
+  return cp.on("error", cb);
+}
+
+export function onExitImpl(cp, cb) {
+  return cp.on("exit", cb);
+}
+
+export function onMessageImpl(cp, cb) {
+  return cp.on("message", cb);
+}
+
+export function onSpawnImpl(cp, cb) {
+  return cp.on("spawn", cb);
 }
 
 const _undefined = undefined;
