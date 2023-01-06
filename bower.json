@@ -24,7 +24,8 @@
     "purescript-node-streams": "^7.0.0",
     "purescript-nullable": "^6.0.0",
     "purescript-posix-types": "^6.0.0",
-    "purescript-unsafe-coerce": "^6.0.0"
+    "purescript-unsafe-coerce": "^6.0.0",
+    "purescript-js-abort-controller": "https://github.com/purescript-contrib/purescript-js-abort-controller.git#^1.0.0"
   },
   "devDependencies": {
     "purescript-console": "^6.0.0"

@@ -87,11 +87,11 @@ import Data.Posix.Signal (Signal(..))
 import Data.Posix.Signal as Signal
 import Data.Show.Generic (genericShow)
 import Effect (Effect)
+import Effect.AbortController (AbortSignal)
 import Effect.Exception as Exception
 import Effect.Uncurried (EffectFn1, EffectFn2, EffectFn3, EffectFn4, EffectFn5, mkEffectFn1, mkEffectFn2, mkEffectFn3, runEffectFn1, runEffectFn2, runEffectFn3, runEffectFn4, runEffectFn5)
 import Foreign (Foreign)
 import Foreign.Object (Object)
-import Node.AbortController (AbortSignal)
 import Node.Buffer.Immutable (ImmutableBuffer)
 import Node.FS as FS
 import Node.Stream (Readable, Writable, Stream)
