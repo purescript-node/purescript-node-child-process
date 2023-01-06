@@ -77,7 +77,6 @@ module Node.ChildProcess
 
 import Prelude
 
-import Data.Argonaut.Core (Json)
 import Data.Either (Either, either)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
@@ -262,10 +261,10 @@ onExit cp cb = runEffectFn2 onExitImpl cp $ mkEffectFn2 \a b ->
 foreign import onExitImpl :: EffectFn2 (ChildProcess) (EffectFn2 (Nullable Int) (Nullable String) Unit) (Unit)
 
 -- | Handle the `"message"` signal.
-onMessage :: ChildProcess -> (Json -> Maybe Handle -> Effect Unit) -> Effect Unit
+onMessage :: ChildProcess -> (Foreign -> Maybe Handle -> Effect Unit) -> Effect Unit
 onMessage cp cb = runEffectFn2 onMessageImpl cp $ mkEffectFn2 \a b -> cb a (toMaybe b)
 
-foreign import onMessageImpl :: EffectFn2 (ChildProcess) (EffectFn2 Json (Nullable Handle) Unit) (Unit)
+foreign import onMessageImpl :: EffectFn2 (ChildProcess) (EffectFn2 Foreign (Nullable Handle) Unit) (Unit)
 
 onSpawn :: ChildProcess -> Effect Unit -> Effect Unit
 onSpawn cp cb = runEffectFn2 onSpawnImpl cp cb
