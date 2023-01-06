@@ -18,34 +18,25 @@
 module Node.ChildProcess
   ( Handle
   , ChildProcess
-  , channel
-  , exitCode
-  , killed
-  , signalCode
-  , spawnArgs
-  , spawnFile
   , stdin
   , stdout
   , stderr
   , stdio
-  , pid
-  , connected
-  , ref
-  , unref
-  , pidExists
-  , kill
-  , kill'
-  , send
-  , disconnect
-  , Error
-  , Shell(..)
-  , toStandardError
   , onSpawn
+  , Error
+  , toStandardError
   , onError
   , onExit
   , onClose
   , onDisconnect
   , onMessage
+  , StdIOBehaviour(..)
+  , stdIOBehavior
+  , pipe
+  , inherit
+  , inheritOr
+  , ignore
+  , Shell(..)
   , spawn
   , SpawnOptions
   , spawnSync
@@ -60,12 +51,21 @@ module Node.ChildProcess
   , ExecSyncOptions
   , fork
   , ForkOptions
-  , StdIOBehaviour(..)
-  , stdIOBehavior
-  , pipe
-  , inherit
-  , inheritOr
-  , ignore
+  , spawnFile
+  , spawnArgs
+  , pid
+  , exitCode
+  , signalCode
+  , connected
+  , killed
+  , kill
+  , kill'
+  , channel
+  , ref
+  , unref
+  , pidExists
+  , send
+  , disconnect
   ) where
 
 import Prelude
