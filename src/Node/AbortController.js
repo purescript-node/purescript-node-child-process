@@ -17,11 +17,11 @@ export function signal(ac) {
 }
 
 export function newSignalImpl(reason) {
-  return AbortController.abort(reason);
+  return AbortSignal.abort(reason);
 }
 
 export function newDelayImpl(timeout) {
-  return AbortController.timeout(timeout);
+  return AbortSignal.timeout(timeout);
 }
 
 export function onAbortImpl(signal, cb) {
