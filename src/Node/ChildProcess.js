@@ -82,18 +82,6 @@ export function stdoutImpl(cp) {
   return cp.stdout;
 }
 
-export function stdinImpl(cp) {
-  return cp.stdin;
-}
-
-export function stdoutImpl(cp) {
-  return cp.stdout;
-}
-
-export function stderrImpl(cp) {
-  return cp.stderr;
-}
-
 export function onCloseImpl(cp, cb) {
   return cp.on("close", cb);
 }
