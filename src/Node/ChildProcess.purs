@@ -14,7 +14,7 @@
 -- |
 -- | Functions like `spawn`, `exec`, and `fork` use Node defaults
 -- | except for the following cases:
--- | - `encoding` is always set to `Buffer`. This ensures other functions have the correct type.
+-- | - `encoding` is always set to `"buffer"`. This ensures other functions have the correct type.
 module Node.ChildProcess
   ( Handle
   , ChildProcess
@@ -85,7 +85,7 @@ import Effect.Uncurried (EffectFn1, EffectFn2, EffectFn3, EffectFn4, EffectFn5, 
 import Foreign (Foreign)
 import Foreign.Object (Object)
 import Node.AbortController (AbortSignal)
-import Node.Buffer (Buffer)
+import Node.Buffer.Immutable (ImmutableBuffer)
 import Node.FS as FS
 import Node.Stream (Readable, Writable, Stream)
 import Unsafe.Coerce (unsafeCoerce)
@@ -248,8 +248,9 @@ onError cp cb = runEffectFn2 onErrorImpl cp $ mkEffectFn1 cb
 foreign import onErrorImpl :: EffectFn2 (ChildProcess) (EffectFn1 Error Unit) (Unit)
 
 -- | Handle the `"exit"` signal.
-onExit :: ChildProcess -> (Maybe Int -> Maybe String -> Effect Unit) -> Effect Unit
-onExit cp cb = runEffectFn2 onExitImpl cp $ mkEffectFn2 \a b -> cb (toMaybe a) (toMaybe b)
+onExit :: ChildProcess -> ({ exitCode :: Maybe Int, signalCode :: Maybe { code :: String, signal :: Maybe Signal } } -> Effect Unit) -> Effect Unit
+onExit cp cb = runEffectFn2 onExitImpl cp $ mkEffectFn2 \a b ->
+  cb { exitCode: toMaybe a, signalCode: toMaybe b <#> \s -> { code: s, signal: Signal.fromString s } }
 
 foreign import onExitImpl :: EffectFn2 (ChildProcess) (EffectFn2 (Nullable Int) (Nullable String) Unit) (Unit)
 
@@ -301,7 +302,7 @@ foreign import data KillSignal :: Type
 -- |
 -- | Note that the child process will be killed if the amount of output exceeds
 -- | a certain threshold (the default is defined by Node.js).
-exec :: String -> (ExecOptions -> ExecOptions) -> ({ error :: Maybe Exception.Error, stdout :: Buffer, stderr :: Buffer } -> Effect Unit) -> Effect ChildProcess
+exec :: String -> (ExecOptions -> ExecOptions) -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect ChildProcess
 exec cmd buildOptions cb = runEffectFn3 execImpl cmd jsOptions $ mkEffectFn3 \err stdOUT stdERR ->
   cb { error: toMaybe err, stdout: stdOUT, stderr: stdERR }
   where
@@ -334,7 +335,7 @@ exec cmd buildOptions cb = runEffectFn3 execImpl cmd jsOptions $ mkEffectFn3 \er
     , windowsHide: Nothing
     }
 
-foreign import execImpl :: EffectFn3 String JsExecAsyncOptions (EffectFn3 (Nullable Exception.Error) Buffer Buffer Unit) ChildProcess
+foreign import execImpl :: EffectFn3 String JsExecAsyncOptions (EffectFn3 (Nullable Exception.Error) ImmutableBuffer ImmutableBuffer Unit) ChildProcess
 
 data Shell
   = DefaultShell
@@ -379,7 +380,7 @@ type JsExecFileAsyncOptions =
 
 -- | Like `exec`, except instead of using a shell, it passes the arguments
 -- | directly to the specified command.
-execFile :: String -> Array String -> (ExecFileOptions -> ExecFileOptions) -> ({ error :: Maybe Exception.Error, stdout :: Buffer, stderr :: Buffer } -> Effect Unit) -> Effect ChildProcess
+execFile :: String -> Array String -> (ExecFileOptions -> ExecFileOptions) -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect ChildProcess
 execFile file args buildOptions cb = runEffectFn4 execFileImpl file args jsOptions $ mkEffectFn3 \err stdOUT stdERR ->
   cb { error: toMaybe err, stdout: stdOUT, stderr: stdERR }
   where
@@ -417,10 +418,11 @@ execFile file args buildOptions cb = runEffectFn4 execFileImpl file args jsOptio
     , windowsVerbatimArguments: Nothing
     }
 
-foreign import execFileImpl :: EffectFn4 (String) (Array String) (JsExecFileAsyncOptions) (EffectFn3 (Nullable Exception.Error) Buffer Buffer Unit) (ChildProcess)
+foreign import execFileImpl :: EffectFn4 (String) (Array String) (JsExecFileAsyncOptions) (EffectFn3 (Nullable Exception.Error) ImmutableBuffer ImmutableBuffer Unit) (ChildProcess)
 
 type ExecSyncOptions =
   { cwd :: Maybe String
+  , input :: Maybe ImmutableBuffer
   , stdio :: Maybe (Array (Maybe StdIOBehaviour))
   , env :: Maybe (Object String)
   , shell :: Maybe String
@@ -435,6 +437,7 @@ type ExecSyncOptions =
 
 type JsExecSyncOptions =
   { cwd :: String
+  , input :: ImmutableBuffer
   , stdio :: ActualStdIOOptions
   , env :: Object String
   , encoding :: String
@@ -451,12 +454,13 @@ type JsExecSyncOptions =
 -- | Generally identical to `exec`, with the exception that
 -- | the method will not return until the child process has fully closed.
 -- | Returns: The stdout from the command.
-execSync :: String -> (ExecSyncOptions -> ExecSyncOptions) -> Effect ChildProcess
+execSync :: String -> (ExecSyncOptions -> ExecSyncOptions) -> Effect ImmutableBuffer
 execSync cmd buildOptions = runEffectFn2 execSyncImpl cmd jsOptions
   where
   options = buildOptions defaults
   jsOptions =
     { cwd: fromMaybe undefined options.cwd
+    , input: fromMaybe undefined options.input
     , stdio: maybe undefined toActualStdIOOptions options.stdio
     , env: fromMaybe undefined options.env
     , encoding: "buffer" -- force stdout/stderr in callback to be Buffers
@@ -473,6 +477,7 @@ execSync cmd buildOptions = runEffectFn2 execSyncImpl cmd jsOptions
   defaults :: ExecSyncOptions
   defaults =
     { cwd: Nothing
+    , input: Nothing
     , stdio: Nothing
     , env: Nothing
     , shell: Nothing
@@ -485,12 +490,12 @@ execSync cmd buildOptions = runEffectFn2 execSyncImpl cmd jsOptions
     , windowsHide: Nothing
     }
 
-foreign import execSyncImpl :: EffectFn2 String JsExecSyncOptions ChildProcess
+foreign import execSyncImpl :: EffectFn2 String JsExecSyncOptions ImmutableBuffer
 
 type ExecFileSyncOptions =
   { cwd :: Maybe String
   , env :: Maybe (Object String)
-  , input :: Maybe Buffer
+  , input :: Maybe ImmutableBuffer
   , stdio :: Maybe (Array (Maybe StdIOBehaviour))
   , shell :: Maybe String
   , uid :: Maybe Int
@@ -503,7 +508,7 @@ type ExecFileSyncOptions =
 
 type JsExecFileSyncOptions =
   { cwd :: String
-  , input :: Buffer
+  , input :: ImmutableBuffer
   , stdio :: ActualStdIOOptions
   , env :: Object String
   , uid :: Int
@@ -638,7 +643,7 @@ foreign import spawnImpl :: EffectFn3 String (Array String) JsSpawnAsyncOptions 
 
 type SpawnSyncOptions =
   { cwd :: Maybe String
-  , input :: Maybe Buffer
+  , input :: Maybe ImmutableBuffer
   , argv0 :: Maybe String
   , stdio :: Maybe (Array (Maybe StdIOBehaviour))
   , env :: Maybe (Object String)
@@ -654,7 +659,7 @@ type SpawnSyncOptions =
 
 type JsSpawnSyncOptions =
   { cwd :: String
-  , input :: Buffer
+  , input :: ImmutableBuffer
   , argv0 :: String
   , stdio :: ActualStdIOOptions
   , env :: Object String
