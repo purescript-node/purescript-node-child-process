@@ -537,13 +537,13 @@ type JsExecFileSyncOptions =
   , shell :: String
   }
 
-execFileSync :: String -> Array String -> Effect ChildProcess
+execFileSync :: String -> Array String -> Effect ImmutableBuffer
 execFileSync file args = execFileSync' file args identity
 
 -- | Generally identical to `execFile`, with the exception that
 -- | the method will not return until the child process has fully closed.
 -- | Returns: The stdout from the command.
-execFileSync' :: String -> Array String -> (ExecFileSyncOptions -> ExecFileSyncOptions) -> Effect ChildProcess
+execFileSync' :: String -> Array String -> (ExecFileSyncOptions -> ExecFileSyncOptions) -> Effect ImmutableBuffer
 execFileSync' file args buildOptions = runEffectFn3 execFileSyncImpl file args jsOptions
   where
   options = buildOptions defaults
@@ -577,7 +577,7 @@ execFileSync' file args buildOptions = runEffectFn3 execFileSyncImpl file args j
     , shell: Nothing
     }
 
-foreign import execFileSyncImpl :: EffectFn3 String (Array String) JsExecFileSyncOptions ChildProcess
+foreign import execFileSyncImpl :: EffectFn3 String (Array String) JsExecFileSyncOptions ImmutableBuffer
 
 type SpawnOptions =
   { cwd :: Maybe String
