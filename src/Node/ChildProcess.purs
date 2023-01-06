@@ -37,6 +37,7 @@ module Node.ChildProcess
   , inheritOr
   , ignore
   , Shell(..)
+  , SerializationOption(..)
   , spawn
   , spawn'
   , SpawnOptions
@@ -578,6 +579,20 @@ execFileSync' file args buildOptions = runEffectFn3 execFileSyncImpl file args j
 
 foreign import execFileSyncImpl :: EffectFn3 String (Array String) JsExecFileSyncOptions ImmutableBuffer
 
+data SerializationOption
+  = SerializeJson
+  | SerializeAdvanced
+
+derive instance Eq SerializationOption
+derive instance Generic SerializationOption _
+instance Show SerializationOption where
+  show x = genericShow x
+
+toJsSerialization :: SerializationOption -> String
+toJsSerialization = case _ of
+  SerializeJson -> "json"
+  SerializeAdvanced -> "advanced"
+
 type SpawnOptions =
   { cwd :: Maybe String
   , env :: Maybe (Object String)
@@ -586,7 +601,7 @@ type SpawnOptions =
   , detached :: Maybe Boolean
   , uid :: Maybe Int
   , gid :: Maybe Int
-  , serialization :: Maybe String
+  , serialization :: Maybe SerializationOption
   , shell :: Maybe Shell
   , windowsVerbatimArguments :: Maybe Boolean
   , windowsHide :: Maybe Boolean
@@ -630,7 +645,7 @@ spawn' file args buildOptions = runEffectFn3 spawnImpl file args jsOptions
     , detached: fromMaybe undefined options.detached
     , uid: fromMaybe undefined options.uid
     , gid: fromMaybe undefined options.gid
-    , serialization: fromMaybe undefined options.serialization
+    , serialization: maybe undefined toJsSerialization options.serialization
     , stdio: maybe undefined toActualStdIOOptions options.stdio
     , shell: case options.shell of
         Nothing -> undefined
@@ -748,7 +763,7 @@ type ForkOptions =
   , execPath :: Maybe String
   , execArgv :: Maybe (Array String)
   , gid :: Maybe Int
-  , serialization :: Maybe String
+  , serialization :: Maybe SerializationOption
   , signal :: Maybe AbortSignal
   , stdio :: Maybe (Array (Maybe StdIOBehaviour))
   , uid :: Maybe Int
@@ -788,7 +803,7 @@ fork' modulePath args buildOptions = runEffectFn3 forkImpl modulePath args jsOpt
     , execPath: fromMaybe undefined options.execPath
     , execArgv: fromMaybe undefined options.execArgv
     , gid: fromMaybe undefined options.gid
-    , serialization: fromMaybe undefined options.serialization
+    , serialization: maybe undefined toJsSerialization options.serialization
     , signal: fromMaybe undefined options.signal
     , stdio: maybe undefined toActualStdIOOptions options.stdio
     , uid: fromMaybe undefined options.uid
