@@ -1,6 +1,6 @@
 const newImpl = function() {
   return new AbortController();
-}
+};
 
 export { newImpl as new };
 
