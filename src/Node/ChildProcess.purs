@@ -172,13 +172,13 @@ type JsSendOptions =
   { keepOpen :: Boolean
   }
 
-send :: ChildProcess -> Foreign -> Handle -> (SendOptions -> SendOptions) -> Effect Unit -> Effect Unit
+send :: ChildProcess -> Foreign -> Handle -> (SendOptions -> SendOptions) -> Effect Unit -> Effect Boolean
 send cp msg handle buildOptions cb = runEffectFn5 sendImpl cp msg handle jsOptions cb
   where
   options = buildOptions { keepOpen: Nothing }
   jsOptions = { keepOpen: fromMaybe undefined options.keepOpen }
 
-foreign import sendImpl :: EffectFn5 (ChildProcess) (Foreign) (Handle) (JsSendOptions) (Effect Unit) (Unit)
+foreign import sendImpl :: EffectFn5 (ChildProcess) (Foreign) (Handle) (JsSendOptions) (Effect Unit) (Boolean)
 
 signalCode :: ChildProcess -> Effect (Maybe { signalStr :: String, signal :: Maybe Signal })
 signalCode cp = map enhance $ runEffectFn1 signalCodeImpl cp
