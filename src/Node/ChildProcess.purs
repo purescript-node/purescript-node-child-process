@@ -26,6 +26,7 @@ module Node.ChildProcess
   , Error
   , toStandardError
   , onError
+  , Exit(..)
   , onExit
   , onClose
   , onDisconnect
@@ -95,6 +96,7 @@ import Foreign.Object (Object)
 import Node.Buffer.Immutable (ImmutableBuffer)
 import Node.FS as FS
 import Node.Stream (Readable, Writable, Stream)
+import Partial.Unsafe (unsafeCrashWith)
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | A handle for inter-process communication (IPC).
@@ -254,10 +256,24 @@ onError cp cb = runEffectFn2 onErrorImpl cp $ mkEffectFn1 cb
 
 foreign import onErrorImpl :: EffectFn2 (ChildProcess) (EffectFn1 Error Unit) (Unit)
 
+-- | Specifies how a child process exited; normally (with an exit code), or
+-- | terminated by the given signal.
+data Exit
+  = ExitCode Int
+  | SignalCode String (Maybe Signal)
+
+derive instance Eq Exit
+derive instance Generic Exit _
+instance showExit :: Show Exit where
+  show x = genericShow x
+
 -- | Handle the `"exit"` signal.
-onExit :: ChildProcess -> ({ exitCode :: Maybe Int, signalCode :: Maybe { code :: String, signal :: Maybe Signal } } -> Effect Unit) -> Effect Unit
-onExit cp cb = runEffectFn2 onExitImpl cp $ mkEffectFn2 \a b ->
-  cb { exitCode: toMaybe a, signalCode: toMaybe b <#> \s -> { code: s, signal: Signal.fromString s } }
+onExit :: ChildProcess -> (Exit -> Effect Unit) -> Effect Unit
+onExit cp cb = runEffectFn2 onExitImpl cp $ mkEffectFn2 \e s ->
+  cb case toMaybe e, toMaybe s of
+    Just i, _ -> ExitCode i
+    _, Just sig -> SignalCode sig $ Signal.fromString sig
+    _, _ -> unsafeCrashWith "Impossible: either exit code or signal code must be non-null"
 
 foreign import onExitImpl :: EffectFn2 (ChildProcess) (EffectFn2 (Nullable Int) (Nullable String) Unit) (Unit)
 
