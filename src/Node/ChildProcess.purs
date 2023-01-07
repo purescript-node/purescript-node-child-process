@@ -394,8 +394,6 @@ type JsExecFileOptions =
   { cwd :: String
   , env :: Object String
   , encoding :: String
-  , shell :: ActualShellOption
-  , signal :: AbortSignal
   , timeout :: Int
   , maxBuffer :: Int
   , killSignal :: KillSignal
@@ -403,6 +401,8 @@ type JsExecFileOptions =
   , gid :: Int
   , windowsHide :: Boolean
   , windowsVerbatimArguments :: Boolean
+  , shell :: ActualShellOption
+  , signal :: AbortSignal
   }
 
 execFile :: String -> Array String -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect ChildProcess
@@ -461,7 +461,6 @@ type ExecSyncOptions =
   , timeout :: Maybe Int
   , killSignal :: Maybe (Either String Int)
   , maxBuffer :: Maybe Int
-  , signal :: Maybe AbortSignal
   , windowsHide :: Maybe Boolean
   }
 
@@ -470,14 +469,13 @@ type JsExecSyncOptions =
   , input :: ImmutableBuffer
   , stdio :: ActualStdIOOptions
   , env :: Object String
-  , encoding :: String
   , shell :: String
   , uid :: Int
   , gid :: Int
   , timeout :: Int
   , killSignal :: KillSignal
   , maxBuffer :: Int
-  , signal :: AbortSignal
+  , encoding :: String
   , windowsHide :: Boolean
   }
 
@@ -503,7 +501,6 @@ execSync' cmd buildOptions = runEffectFn2 execSyncImpl cmd jsOptions
     , timeout: fromMaybe undefined options.timeout
     , killSignal: fromMaybe undefined $ map (either (unsafeCoerce :: String -> KillSignal) (unsafeCoerce :: Int -> KillSignal)) options.killSignal
     , maxBuffer: fromMaybe undefined options.maxBuffer
-    , signal: fromMaybe undefined options.signal
     , windowsHide: fromMaybe undefined options.windowsHide
     }
 
@@ -519,7 +516,6 @@ execSync' cmd buildOptions = runEffectFn2 execSyncImpl cmd jsOptions
     , timeout: Nothing
     , killSignal: Nothing
     , maxBuffer: Nothing
-    , signal: Nothing
     , windowsHide: Nothing
     }
 
@@ -527,16 +523,16 @@ foreign import execSyncImpl :: EffectFn2 String JsExecSyncOptions ImmutableBuffe
 
 type ExecFileSyncOptions =
   { cwd :: Maybe String
-  , env :: Maybe (Object String)
   , input :: Maybe ImmutableBuffer
   , stdio :: Maybe (Array (Maybe StdIOBehaviour))
-  , shell :: Maybe String
+  , env :: Maybe (Object String)
   , uid :: Maybe Int
   , gid :: Maybe Int
   , timeout :: Maybe Int
   , killSignal :: Maybe (Either String Int)
   , maxBuffer :: Maybe Int
   , windowsHide :: Maybe Boolean
+  , shell :: Maybe Shell
   }
 
 type JsExecFileSyncOptions =
@@ -551,7 +547,7 @@ type JsExecFileSyncOptions =
   , maxBuffer :: Int
   , encoding :: String
   , windowsHide :: Boolean
-  , shell :: String
+  , shell :: ActualShellOption
   }
 
 execFileSync :: String -> Array String -> Effect ImmutableBuffer
@@ -570,7 +566,10 @@ execFileSync' file args buildOptions = runEffectFn3 execFileSyncImpl file args j
     , stdio: maybe undefined toActualStdIOOptions options.stdio
     , env: fromMaybe undefined options.env
     , encoding: "buffer" -- force stdout/stderr in callback to be Buffers
-    , shell: fromMaybe undefined options.shell
+    , shell: case options.shell of
+        Nothing -> undefined
+        Just DefaultShell -> (unsafeCoerce :: Boolean -> ActualShellOption) true
+        Just (CustomShell shell) -> (unsafeCoerce :: String -> ActualShellOption) shell
     , uid: fromMaybe undefined options.uid
     , gid: fromMaybe undefined options.gid
     , timeout: fromMaybe undefined options.timeout
@@ -812,6 +811,7 @@ type ForkOptions =
   , gid :: Maybe Int
   , serialization :: Maybe SerializationOption
   , signal :: Maybe AbortSignal
+  , killSignal :: Maybe (Either String Int)
   , stdio :: Maybe (Array (Maybe StdIOBehaviour))
   , uid :: Maybe Int
   , windowsVerbatimArguments :: Maybe Boolean
@@ -827,6 +827,8 @@ type JsForkOptions =
   , gid :: Int
   , serialization :: String
   , signal :: AbortSignal
+  , killSignal :: KillSignal
+  -- silent is ignored due to stdio
   , stdio :: ActualStdIOOptions
   , uid :: Int
   , windowsVerbatimArguments :: Boolean
@@ -852,6 +854,7 @@ fork' modulePath args buildOptions = runEffectFn3 forkImpl modulePath args jsOpt
     , gid: fromMaybe undefined options.gid
     , serialization: maybe undefined toJsSerialization options.serialization
     , signal: fromMaybe undefined options.signal
+    , killSignal: fromMaybe undefined $ map (either (unsafeCoerce :: String -> KillSignal) (unsafeCoerce :: Int -> KillSignal)) options.killSignal
     , stdio: maybe undefined toActualStdIOOptions options.stdio
     , uid: fromMaybe undefined options.uid
     , windowsVerbatimArguments: fromMaybe undefined options.windowsVerbatimArguments
@@ -867,6 +870,7 @@ fork' modulePath args buildOptions = runEffectFn3 forkImpl modulePath args jsOpt
     , gid: Nothing
     , serialization: Nothing
     , signal: Nothing
+    , killSignal: Nothing
     , stdio: Nothing
     , uid: Nothing
     , windowsVerbatimArguments: Nothing
