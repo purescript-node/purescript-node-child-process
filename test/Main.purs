@@ -2,7 +2,6 @@ module Test.Main where
 
 import Prelude
 
-import Data.Foldable (for_)
 import Data.Maybe (Maybe(..))
 import Data.Posix.Signal (Signal(..))
 import Effect (Effect)
@@ -49,8 +48,7 @@ spawnLs = do
   ls <- spawn "ls" [ "-la" ]
   onExit ls \exit ->
     log $ "ls exited: " <> show exit
-  for_ (stdout ls) \stream ->
-    onData stream (Buffer.toString UTF8 >=> log)
+  onData (stdout ls) (Buffer.toString UTF8 >=> log)
 
 nonExistentExecutable :: Effect Unit -> Effect Unit
 nonExistentExecutable done = do

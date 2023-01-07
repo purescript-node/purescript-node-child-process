@@ -3,11 +3,11 @@
 export { 
   spawn as spawnImpl, 
   spawnSync as spawnSyncImpl,
-  exec as execImpl, 
-  execFile as execFileImpl, 
-  execSync as execSyncImpl, 
-  execFileSync as execFileSyncImpl, 
-  fork as forkImpl 
+  // exec as execImpl, 
+  // execFile as execFileImpl, 
+  // execSync as execSyncImpl, 
+  // execFileSync as execFileSyncImpl, 
+  // fork as forkImpl 
 } from "node:child_process";
 
 export function channelImpl(cp) {
@@ -66,11 +66,11 @@ export function spawnFile(cp) {
   return cp.spawnFile;
 }
 
-export function stderrImpl(cp) {
+export function stderr(cp) {
   return cp.stderr;
 }
 
-export function stdinImpl(cp) {
+export function stdin(cp) {
   return cp.stdin;
 }
 
@@ -78,7 +78,7 @@ export function stdioImpl(cp) {
   return cp.stdio;
 }
 
-export function stdoutImpl(cp) {
+export function stdout(cp) {
   return cp.stdout;
 }
 
@@ -108,5 +108,3 @@ export function onSpawnImpl(cp, cb) {
 
 const _undefined = undefined;
 export { _undefined as undefined };
-import process from "process";
-export { process };

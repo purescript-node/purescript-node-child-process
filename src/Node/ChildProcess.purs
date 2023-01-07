@@ -31,12 +31,6 @@ module Node.ChildProcess
   , onClose
   , onDisconnect
   , onMessage
-  , StdIOBehaviour(..)
-  , stdIOBehavior
-  , pipe
-  , inherit
-  , inheritOr
-  , ignore
   , Shell(..)
   , SerializationOption(..)
   , spawn
@@ -83,7 +77,7 @@ import Prelude
 import Data.Either (Either, either)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
-import Data.Nullable (Nullable, toMaybe, toNullable)
+import Data.Nullable (Nullable, toMaybe)
 import Data.Posix (Pid)
 import Data.Posix.Signal (Signal(..))
 import Data.Posix.Signal as Signal
@@ -95,9 +89,10 @@ import Effect.Uncurried (EffectFn1, EffectFn2, EffectFn3, EffectFn4, EffectFn5, 
 import Foreign (Foreign)
 import Foreign.Object (Object)
 import Node.Buffer.Immutable (ImmutableBuffer)
-import Node.FS as FS
-import Node.Stream (Readable, Writable, Stream)
+import Node.ChildProcess.StdIO (StdIoOption, toStdIoOption, useIpc)
+import Node.Stream (Read, Stream, Write)
 import Partial.Unsafe (unsafeCrashWith)
+import Prim.Boolean (False, True)
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | A handle for inter-process communication (IPC).
@@ -105,33 +100,48 @@ foreign import data Handle :: Type
 
 -- | Opaque type returned by `spawn`, `fork`, and `exec`.
 -- | Needed as input for most methods in this module.
-foreign import data ChildProcess :: Type
+-- |
+-- | Type parameters are better understood via
+-- | ```
+-- | ChildProcess stdin stdout stderr hasIpc
+-- | ```
+-- | The row types track whether `stdin`/`stdout`/`stderr` exist on the ChildProcess instance
+-- | based on the `stdio` option given and whether they are readable or writeable streams.
+-- |
+-- | The Boolean type tracks whether "ipc" was enabled in the `stdio` option.
+foreign import data ChildProcess :: Row Type -> Row Type -> Row Type -> Boolean -> Type
 
-channel :: ChildProcess -> Effect (Maybe { ref :: Effect Unit, unref :: Effect Unit })
+channel
+  :: forall stdIn stdOut stdErr
+   . ChildProcess stdIn stdOut stdErr True
+  -> Effect (Maybe { ref :: Effect Unit, unref :: Effect Unit })
 channel cp = toMaybe <$> runEffectFn1 channelImpl cp
 
-foreign import channelImpl :: EffectFn1 ChildProcess (Nullable { ref :: Effect Unit, unref :: Effect Unit })
+foreign import channelImpl :: forall stdIn stdOut stdErr. EffectFn1 (ChildProcess stdIn stdOut stdErr True) (Nullable { ref :: Effect Unit, unref :: Effect Unit })
 
 -- | Indicates whether it is still possible to send and receive
 -- | messages from the child process.
-connected :: ChildProcess -> Effect Boolean
+connected
+  :: forall stdIn stdOut stdErr
+   . ChildProcess stdIn stdOut stdErr True
+  -> Effect Boolean
 connected cp = runEffectFn1 connectedImpl cp
 
-foreign import connectedImpl :: EffectFn1 ChildProcess Boolean
+foreign import connectedImpl :: forall stdIn stdOut stdErr. EffectFn1 (ChildProcess stdIn stdOut stdErr True) Boolean
 
 -- | Closes the IPC channel between parent and child.
-disconnect :: ChildProcess -> Effect Unit
+disconnect :: forall stdIn stdOut stdErr. ChildProcess stdIn stdOut stdErr True -> Effect Unit
 disconnect cp = runEffectFn1 disconnectImpl cp
 
-foreign import disconnectImpl :: EffectFn1 ChildProcess Unit
+foreign import disconnectImpl :: forall stdIn stdOut stdErr. EffectFn1 (ChildProcess stdIn stdOut stdErr True) Unit
 
-exitCode :: ChildProcess -> Effect (Maybe Int)
+exitCode :: forall stdIn stdOut stdErr ipc. ChildProcess stdIn stdOut stdErr ipc -> Effect (Maybe Int)
 exitCode cp = toMaybe <$> runEffectFn1 exitCodeImpl cp
 
-foreign import exitCodeImpl :: EffectFn1 ChildProcess (Nullable Int)
+foreign import exitCodeImpl :: forall stdIn stdOut stdErr ipc. EffectFn1 (ChildProcess stdIn stdOut stdErr ipc) (Nullable Int)
 
 -- | Same as `kill' SIGTERM`
-kill :: ChildProcess -> Effect Boolean
+kill :: forall stdIn stdOut stdErr ipc. ChildProcess stdIn stdOut stdErr ipc -> Effect Boolean
 kill = kill' SIGTERM
 
 -- | Send a signal to a child process. In the same way as the
@@ -142,37 +152,38 @@ kill = kill' SIGTERM
 -- | and the signal. They can vary from system to system.
 -- | The child process might emit an `"error"` event if the signal
 -- | could not be delivered.
-kill' :: Signal -> ChildProcess -> Effect Boolean
+kill' :: forall stdIn stdOut stdErr ipc. Signal -> ChildProcess stdIn stdOut stdErr ipc -> Effect Boolean
 kill' sig cp = runEffectFn2 killImpl (Signal.toString sig) cp
 
-foreign import killImpl :: EffectFn2 String ChildProcess Boolean
+foreign import killImpl :: forall stdIn stdOut stdErr ipc. EffectFn2 String (ChildProcess stdIn stdOut stdErr ipc) Boolean
 
-pidExists :: ChildProcess -> Effect Boolean
+pidExists :: forall stdIn stdOut stdErr ipc. ChildProcess stdIn stdOut stdErr ipc -> Effect Boolean
 pidExists cp = runEffectFn1 pidExistsImpl cp
 
-foreign import pidExistsImpl :: EffectFn1 ChildProcess Boolean
+foreign import pidExistsImpl :: forall stdIn stdOut stdErr ipc. EffectFn1 (ChildProcess stdIn stdOut stdErr ipc) Boolean
 
-killed :: ChildProcess -> Effect Boolean
+killed :: forall stdIn stdOut stdErr ipc. ChildProcess stdIn stdOut stdErr ipc -> Effect Boolean
 killed cp = runEffectFn1 killedImpl cp
 
-foreign import killedImpl :: EffectFn1 ChildProcess Boolean
+foreign import killedImpl :: forall stdIn stdOut stdErr ipc. EffectFn1 (ChildProcess stdIn stdOut stdErr ipc) Boolean
 
 -- | The process ID of a child process. Note that if the process has already
 -- | exited, another process may have taken the same ID, so be careful!
-pid :: ChildProcess -> Effect (Maybe Pid)
+pid :: forall stdIn stdOut stdErr ipc. ChildProcess stdIn stdOut stdErr ipc -> Effect (Maybe Pid)
 pid cp = toMaybe <$> runEffectFn1 pidImpl cp
 
-foreign import pidImpl :: EffectFn1 ChildProcess (Nullable Pid)
+foreign import pidImpl :: forall stdIn stdOut stdErr ipc. EffectFn1 (ChildProcess stdIn stdOut stdErr ipc) (Nullable Pid)
 
-ref :: ChildProcess -> Effect Unit
+-- Note: add `detached` type parameter to ChildProcess
+ref :: forall stdIn stdOut stdErr ipc. ChildProcess stdIn stdOut stdErr ipc -> Effect Unit
 ref cp = runEffectFn1 refImpl cp
 
-foreign import refImpl :: EffectFn1 ChildProcess Unit
+foreign import refImpl :: forall stdIn stdOut stdErr ipc. EffectFn1 (ChildProcess stdIn stdOut stdErr ipc) Unit
 
-unref :: ChildProcess -> Effect Unit
+unref :: forall stdIn stdOut stdErr ipc. ChildProcess stdIn stdOut stdErr ipc -> Effect Unit
 unref cp = runEffectFn1 unrefImpl cp
 
-foreign import unrefImpl :: EffectFn1 ChildProcess Unit
+foreign import unrefImpl :: forall stdIn stdOut stdErr ipc. EffectFn1 (ChildProcess stdIn stdOut stdErr ipc) Unit
 
 type SendOptions =
   { keepOpen :: Maybe Boolean
@@ -182,50 +193,60 @@ type JsSendOptions =
   { keepOpen :: Boolean
   }
 
-send :: ChildProcess -> Foreign -> Handle -> (SendOptions -> SendOptions) -> Effect Unit -> Effect Boolean
+send
+  :: forall stdIn stdOut stdErr
+   . ChildProcess stdIn stdOut stdErr True
+  -> Foreign
+  -> Handle
+  -> (SendOptions -> SendOptions)
+  -> Effect Unit
+  -> Effect Boolean
 send cp msg handle buildOptions cb = runEffectFn5 sendImpl cp msg handle jsOptions cb
   where
   options = buildOptions { keepOpen: Nothing }
   jsOptions = { keepOpen: fromMaybe undefined options.keepOpen }
 
-foreign import sendImpl :: EffectFn5 (ChildProcess) (Foreign) (Handle) (JsSendOptions) (Effect Unit) (Boolean)
+foreign import sendImpl :: forall stdIn stdOut stdErr. EffectFn5 (ChildProcess stdIn stdOut stdErr True) (Foreign) (Handle) (JsSendOptions) (Effect Unit) (Boolean)
 
-signalCode :: ChildProcess -> Effect (Maybe { signalStr :: String, signal :: Maybe Signal })
+signalCode
+  :: forall stdIn stdOut stdErr ipc
+   . ChildProcess stdIn stdOut stdErr ipc
+  -> Effect (Maybe { signalStr :: String, signal :: Maybe Signal })
 signalCode cp = map enhance $ runEffectFn1 signalCodeImpl cp
   where
   enhance = toMaybe >>> map (\s -> { signalStr: s, signal: Signal.fromString s })
 
-foreign import signalCodeImpl :: EffectFn1 (ChildProcess) (Nullable String)
+foreign import signalCodeImpl :: forall stdIn stdOut stdErr ipc. EffectFn1 (ChildProcess stdIn stdOut stdErr ipc) (Nullable String)
 
-foreign import spawnArgs :: ChildProcess -> Array String
+foreign import spawnArgs :: forall stdIn stdOut stdErr ipc. ChildProcess stdIn stdOut stdErr ipc -> Array String
 
-foreign import spawnFile :: ChildProcess -> String
-
--- | The standard error stream of a child process. Note that this is only
--- | available if the process was spawned with the stderr option set to "pipe".
-stderr :: ChildProcess -> Maybe (Readable ())
-stderr = toMaybe <<< stderrImpl
-
-foreign import stderrImpl :: ChildProcess -> Nullable (Readable ())
+foreign import spawnFile :: forall stdIn stdOut stdErr ipc. ChildProcess stdIn stdOut stdErr ipc -> String
 
 -- | The standard input stream of a child process. Note that this is only
 -- | available if the process was spawned with the stdin option set to "pipe".
-stdin :: ChildProcess -> Maybe (Writable ())
-stdin = toMaybe <<< stdinImpl
+foreign import stdin
+  :: forall r stdOut stdErr ipc
+   . ChildProcess (write :: Write | r) stdOut stdErr ipc
+  -> Stream (write :: Write | r)
 
-foreign import stdinImpl :: ChildProcess -> Nullable (Writable ())
-
-stdio :: ChildProcess -> Effect (Array Foreign)
+stdio :: forall stdIn stdOut stdErr ipc. ChildProcess stdIn stdOut stdErr ipc -> Effect (Array Foreign)
 stdio cp = runEffectFn1 stdioImpl cp
 
-foreign import stdioImpl :: EffectFn1 (ChildProcess) (Array Foreign)
+foreign import stdioImpl :: forall stdIn stdOut stdErr ipc. EffectFn1 (ChildProcess stdIn stdOut stdErr ipc) (Array Foreign)
 
 -- | The standard output stream of a child process. Note that this is only
 -- | available if the process was spawned with the stdout option set to "pipe".
-stdout :: ChildProcess -> Maybe (Readable ())
-stdout = toMaybe <<< stdoutImpl
+foreign import stdout
+  :: forall r stdIn stdErr ipc
+   . ChildProcess stdIn (read :: Read | r) stdErr ipc
+  -> Stream (read :: Read | r)
 
-foreign import stdoutImpl :: ChildProcess -> Nullable (Readable ())
+-- | The standard error stream of a child process. Note that this is only
+-- | available if the process was spawned with the stderr option set to "pipe".
+foreign import stderr
+  :: forall r stdIn stdOut ipc
+   . ChildProcess stdIn stdOut (read :: Read | r) ipc
+  -> Stream (read :: Read | r)
 
 -- | Send messages to the (`nodejs`) child process.
 -- |
@@ -240,22 +261,22 @@ foreign import stdoutImpl :: ChildProcess -> Nullable (Readable ())
 -- send msg handle (ChildProcess cp) = mkEffect \_ -> runFn2 cp.send msg handle
 
 -- | Handle the `"close"` signal.
-onClose :: ChildProcess -> (Maybe Int -> Maybe String -> Effect Unit) -> Effect Unit
+onClose :: forall stdIn stdOut stdErr ipc. ChildProcess stdIn stdOut stdErr ipc -> (Maybe Int -> Maybe String -> Effect Unit) -> Effect Unit
 onClose cp cb = runEffectFn2 onCloseImpl cp $ mkEffectFn2 \a b -> cb (toMaybe a) (toMaybe b)
 
-foreign import onCloseImpl :: EffectFn2 (ChildProcess) (EffectFn2 (Nullable Int) (Nullable String) Unit) (Unit)
+foreign import onCloseImpl :: forall stdIn stdOut stdErr ipc. EffectFn2 (ChildProcess stdIn stdOut stdErr ipc) (EffectFn2 (Nullable Int) (Nullable String) Unit) (Unit)
 
 -- | Handle the `"disconnect"` signal.
-onDisconnect :: ChildProcess -> Effect Unit -> Effect Unit
+onDisconnect :: forall stdIn stdOut stdErr. ChildProcess stdIn stdOut stdErr True -> Effect Unit -> Effect Unit
 onDisconnect cp cb = runEffectFn2 onDisconnectImpl cp cb
 
-foreign import onDisconnectImpl :: EffectFn2 (ChildProcess) (Effect Unit) (Unit)
+foreign import onDisconnectImpl :: forall stdIn stdOut stdErr. EffectFn2 (ChildProcess stdIn stdOut stdErr True) (Effect Unit) (Unit)
 
 -- | Handle the `"error"` signal.
-onError :: ChildProcess -> (Error -> Effect Unit) -> Effect Unit
+onError :: forall stdIn stdOut stdErr ipc. ChildProcess stdIn stdOut stdErr ipc -> (Error -> Effect Unit) -> Effect Unit
 onError cp cb = runEffectFn2 onErrorImpl cp $ mkEffectFn1 cb
 
-foreign import onErrorImpl :: EffectFn2 (ChildProcess) (EffectFn1 Error Unit) (Unit)
+foreign import onErrorImpl :: forall stdIn stdOut stdErr ipc. EffectFn2 (ChildProcess stdIn stdOut stdErr ipc) (EffectFn1 Error Unit) (Unit)
 
 -- | Specifies how a child process exited; normally (with an exit code), or
 -- | terminated by the given signal.
@@ -269,25 +290,25 @@ instance showExit :: Show Exit where
   show x = genericShow x
 
 -- | Handle the `"exit"` signal.
-onExit :: ChildProcess -> (Exit -> Effect Unit) -> Effect Unit
+onExit :: forall stdIn stdOut stdErr ipc. ChildProcess stdIn stdOut stdErr ipc -> (Exit -> Effect Unit) -> Effect Unit
 onExit cp cb = runEffectFn2 onExitImpl cp $ mkEffectFn2 \e s ->
   cb case toMaybe e, toMaybe s of
     Just i, _ -> ExitCode i
     _, Just sig -> SignalCode sig $ Signal.fromString sig
     _, _ -> unsafeCrashWith "Impossible: either exit code or signal code must be non-null"
 
-foreign import onExitImpl :: EffectFn2 (ChildProcess) (EffectFn2 (Nullable Int) (Nullable String) Unit) (Unit)
+foreign import onExitImpl :: forall stdIn stdOut stdErr ipc. EffectFn2 (ChildProcess stdIn stdOut stdErr ipc) (EffectFn2 (Nullable Int) (Nullable String) Unit) (Unit)
 
 -- | Handle the `"message"` signal.
-onMessage :: ChildProcess -> (Foreign -> Maybe Handle -> Effect Unit) -> Effect Unit
+onMessage :: forall stdIn stdOut stdErr ipc. ChildProcess stdIn stdOut stdErr ipc -> (Foreign -> Maybe Handle -> Effect Unit) -> Effect Unit
 onMessage cp cb = runEffectFn2 onMessageImpl cp $ mkEffectFn2 \a b -> cb a (toMaybe b)
 
-foreign import onMessageImpl :: EffectFn2 (ChildProcess) (EffectFn2 Foreign (Nullable Handle) Unit) (Unit)
+foreign import onMessageImpl :: forall stdIn stdOut stdErr ipc. EffectFn2 (ChildProcess stdIn stdOut stdErr ipc) (EffectFn2 Foreign (Nullable Handle) Unit) (Unit)
 
-onSpawn :: ChildProcess -> Effect Unit -> Effect Unit
+onSpawn :: forall stdIn stdOut stdErr ipc. ChildProcess stdIn stdOut stdErr ipc -> Effect Unit -> Effect Unit
 onSpawn cp cb = runEffectFn2 onSpawnImpl cp cb
 
-foreign import onSpawnImpl :: EffectFn2 ChildProcess (Effect Unit) Unit
+foreign import onSpawnImpl :: forall stdIn stdOut stdErr ipc. EffectFn2 (ChildProcess stdIn stdOut stdErr ipc) (Effect Unit) Unit
 
 type ExecOptions =
   { cwd :: Maybe String
@@ -319,7 +340,7 @@ type JsExecOptions =
 -- | either Int or String
 foreign import data KillSignal :: Type
 
-exec :: String -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect ChildProcess
+exec :: String -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect (ChildProcess () () () False)
 exec cmd = exec' cmd identity
 
 -- | Similar to `spawn`, except that this variant will:
@@ -329,7 +350,7 @@ exec cmd = exec' cmd identity
 -- |
 -- | Note that the child process will be killed if the amount of output exceeds
 -- | a certain threshold (the default is defined by Node.js).
-exec' :: String -> (ExecOptions -> ExecOptions) -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect ChildProcess
+exec' :: String -> (ExecOptions -> ExecOptions) -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect (ChildProcess () () () False)
 exec' cmd buildOptions cb = runEffectFn3 execImpl cmd jsOptions $ mkEffectFn3 \err stdOUT stdERR ->
   cb { error: toMaybe err, stdout: stdOUT, stderr: stdERR }
   where
@@ -362,7 +383,7 @@ exec' cmd buildOptions cb = runEffectFn3 execImpl cmd jsOptions $ mkEffectFn3 \e
     , windowsHide: Nothing
     }
 
-foreign import execImpl :: EffectFn3 String JsExecOptions (EffectFn3 (Nullable Exception.Error) ImmutableBuffer ImmutableBuffer Unit) ChildProcess
+foreign import execImpl :: EffectFn3 String JsExecOptions (EffectFn3 (Nullable Exception.Error) ImmutableBuffer ImmutableBuffer Unit) (ChildProcess () () () False)
 
 data Shell
   = DefaultShell
@@ -405,12 +426,12 @@ type JsExecFileOptions =
   , signal :: AbortSignal
   }
 
-execFile :: String -> Array String -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect ChildProcess
+execFile :: String -> Array String -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect (ChildProcess () () () False)
 execFile file args = execFile' file args identity
 
 -- | Like `exec`, except instead of using a shell, it passes the arguments
 -- | directly to the specified command.
-execFile' :: String -> Array String -> (ExecFileOptions -> ExecFileOptions) -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect ChildProcess
+execFile' :: String -> Array String -> (ExecFileOptions -> ExecFileOptions) -> ({ error :: Maybe Exception.Error, stdout :: ImmutableBuffer, stderr :: ImmutableBuffer } -> Effect Unit) -> Effect (ChildProcess () () () False)
 execFile' file args buildOptions cb = runEffectFn4 execFileImpl file args jsOptions $ mkEffectFn3 \err stdOUT stdERR ->
   cb { error: toMaybe err, stdout: stdOUT, stderr: stdERR }
   where
@@ -448,12 +469,12 @@ execFile' file args buildOptions cb = runEffectFn4 execFileImpl file args jsOpti
     , windowsVerbatimArguments: Nothing
     }
 
-foreign import execFileImpl :: EffectFn4 (String) (Array String) (JsExecFileOptions) (EffectFn3 (Nullable Exception.Error) ImmutableBuffer ImmutableBuffer Unit) (ChildProcess)
+foreign import execFileImpl :: forall stdIn stdOut stdErr ipc. EffectFn4 (String) (Array String) (JsExecFileOptions) (EffectFn3 (Nullable Exception.Error) ImmutableBuffer ImmutableBuffer Unit) (ChildProcess stdIn stdOut stdErr ipc)
 
-type ExecSyncOptions =
+type ExecSyncOptions stdin stdout stderr ipc =
   { cwd :: Maybe String
   , input :: Maybe ImmutableBuffer
-  , stdio :: Maybe (Array (Maybe StdIOBehaviour))
+  , stdio :: Maybe (StdIoOption stdin stdout stderr ipc)
   , env :: Maybe (Object String)
   , shell :: Maybe String
   , uid :: Maybe Int
@@ -464,10 +485,10 @@ type ExecSyncOptions =
   , windowsHide :: Maybe Boolean
   }
 
-type JsExecSyncOptions =
+type JsExecSyncOptions stdin stdout stderr ipc =
   { cwd :: String
   , input :: ImmutableBuffer
-  , stdio :: ActualStdIOOptions
+  , stdio :: StdIoOption stdin stdout stderr ipc
   , env :: Object String
   , shell :: String
   , uid :: Int
@@ -485,14 +506,18 @@ execSync cmd = execSync' cmd identity
 -- | Generally identical to `exec`, with the exception that
 -- | the method will not return until the child process has fully closed.
 -- | Returns: The stdout from the command.
-execSync' :: String -> (ExecSyncOptions -> ExecSyncOptions) -> Effect ImmutableBuffer
+execSync'
+  :: forall stdin stdout stderr ipc
+   . String
+  -> (ExecSyncOptions (write :: Write) (read :: Read) (read :: Read) False -> ExecSyncOptions stdin stdout stderr ipc)
+  -> Effect ImmutableBuffer
 execSync' cmd buildOptions = runEffectFn2 execSyncImpl cmd jsOptions
   where
   options = buildOptions defaults
   jsOptions =
     { cwd: fromMaybe undefined options.cwd
     , input: fromMaybe undefined options.input
-    , stdio: maybe undefined toActualStdIOOptions options.stdio
+    , stdio: fromMaybe undefined options.stdio
     , env: fromMaybe undefined options.env
     , encoding: "buffer" -- force stdout/stderr in callback to be Buffers
     , shell: fromMaybe undefined options.shell
@@ -504,7 +529,7 @@ execSync' cmd buildOptions = runEffectFn2 execSyncImpl cmd jsOptions
     , windowsHide: fromMaybe undefined options.windowsHide
     }
 
-  defaults :: ExecSyncOptions
+  defaults :: ExecSyncOptions (write :: Write) (read :: Read) (read :: Read) False
   defaults =
     { cwd: Nothing
     , input: Nothing
@@ -519,12 +544,12 @@ execSync' cmd buildOptions = runEffectFn2 execSyncImpl cmd jsOptions
     , windowsHide: Nothing
     }
 
-foreign import execSyncImpl :: EffectFn2 String JsExecSyncOptions ImmutableBuffer
+foreign import execSyncImpl :: forall stdin stdout stderr ipc. EffectFn2 String (JsExecSyncOptions stdin stdout stderr ipc) ImmutableBuffer
 
-type ExecFileSyncOptions =
+type ExecFileSyncOptions stdin stdout stderr ipc =
   { cwd :: Maybe String
   , input :: Maybe ImmutableBuffer
-  , stdio :: Maybe (Array (Maybe StdIOBehaviour))
+  , stdio :: Maybe (StdIoOption stdin stdout stderr ipc)
   , env :: Maybe (Object String)
   , uid :: Maybe Int
   , gid :: Maybe Int
@@ -535,10 +560,10 @@ type ExecFileSyncOptions =
   , shell :: Maybe Shell
   }
 
-type JsExecFileSyncOptions =
+type JsExecFileSyncOptions stdin stdout stderr ipc =
   { cwd :: String
   , input :: ImmutableBuffer
-  , stdio :: ActualStdIOOptions
+  , stdio :: StdIoOption stdin stdout stderr ipc
   , env :: Object String
   , uid :: Int
   , gid :: Int
@@ -556,14 +581,14 @@ execFileSync file args = execFileSync' file args identity
 -- | Generally identical to `execFile`, with the exception that
 -- | the method will not return until the child process has fully closed.
 -- | Returns: The stdout from the command.
-execFileSync' :: String -> Array String -> (ExecFileSyncOptions -> ExecFileSyncOptions) -> Effect ImmutableBuffer
+execFileSync' :: forall stdin stdout stderr ipc. String -> Array String -> (ExecFileSyncOptions () () (write :: Write) False -> ExecFileSyncOptions stdin stdout stderr ipc) -> Effect ImmutableBuffer
 execFileSync' file args buildOptions = runEffectFn3 execFileSyncImpl file args jsOptions
   where
   options = buildOptions defaults
   jsOptions =
     { cwd: fromMaybe undefined options.cwd
     , input: fromMaybe undefined options.input
-    , stdio: maybe undefined toActualStdIOOptions options.stdio
+    , stdio: fromMaybe undefined options.stdio
     , env: fromMaybe undefined options.env
     , encoding: "buffer" -- force stdout/stderr in callback to be Buffers
     , shell: case options.shell of
@@ -578,7 +603,7 @@ execFileSync' file args buildOptions = runEffectFn3 execFileSyncImpl file args j
     , windowsHide: fromMaybe undefined options.windowsHide
     }
 
-  defaults :: ExecFileSyncOptions
+  defaults :: ExecFileSyncOptions () () (write :: Write) False
   defaults =
     { cwd: Nothing
     , input: Nothing
@@ -593,7 +618,7 @@ execFileSync' file args buildOptions = runEffectFn3 execFileSyncImpl file args j
     , shell: Nothing
     }
 
-foreign import execFileSyncImpl :: EffectFn3 String (Array String) JsExecFileSyncOptions ImmutableBuffer
+foreign import execFileSyncImpl :: forall stdin stdout stderr ipc. EffectFn3 String (Array String) (JsExecFileSyncOptions stdin stdout stderr ipc) ImmutableBuffer
 
 data SerializationOption
   = SerializeJson
@@ -609,11 +634,11 @@ toJsSerialization = case _ of
   SerializeJson -> "json"
   SerializeAdvanced -> "advanced"
 
-type SpawnOptions =
+type SpawnOptions stdIn stdOut stdErr ipc =
   { cwd :: Maybe String
   , env :: Maybe (Object String)
   , argv0 :: Maybe String
-  , stdio :: Maybe (Array (Maybe StdIOBehaviour))
+  , stdio :: Maybe (StdIoOption stdIn stdOut stdErr ipc)
   , detached :: Maybe Boolean
   , uid :: Maybe Int
   , gid :: Maybe Int
@@ -626,11 +651,11 @@ type SpawnOptions =
   , killSignal :: Maybe (Either String Int)
   }
 
-type JsSpawnOptions =
+type JsSpawnOptions stdIn stdOut stdErr ipc =
   { cwd :: String
   , env :: Object String
   , argv0 :: String
-  , stdio :: ActualStdIOOptions
+  , stdio :: StdIoOption stdIn stdOut stdErr ipc
   , detached :: Boolean
   , uid :: Int
   , gid :: Int
@@ -643,14 +668,19 @@ type JsSpawnOptions =
   , killSignal :: KillSignal
   }
 
-spawn :: String -> Array String -> Effect ChildProcess
+spawn :: String -> Array String -> Effect (ChildProcess (write :: Write) (read :: Read) (read :: Read) False)
 spawn file args = spawn' file args identity
 
 -- | Spawn a child process. Note that, in the event that a child process could
 -- | not be spawned (for example, if the executable was not found) this will
 -- | not throw an error. Instead, the `ChildProcess` will be created anyway,
 -- | but it will immediately emit an 'error' event.
-spawn' :: String -> Array String -> (SpawnOptions -> SpawnOptions) -> Effect ChildProcess
+spawn'
+  :: forall stdIn stdOut stdErr ipc
+   . String
+  -> Array String
+  -> (SpawnOptions (write :: Write) (read :: Read) (read :: Read) False -> SpawnOptions stdIn stdOut stdErr ipc)
+  -> Effect (ChildProcess stdIn stdOut stdErr ipc)
 spawn' file args buildOptions = runEffectFn3 spawnImpl file args jsOptions
   where
   options = buildOptions defaults
@@ -662,7 +692,7 @@ spawn' file args buildOptions = runEffectFn3 spawnImpl file args jsOptions
     , uid: fromMaybe undefined options.uid
     , gid: fromMaybe undefined options.gid
     , serialization: maybe undefined toJsSerialization options.serialization
-    , stdio: maybe undefined toActualStdIOOptions options.stdio
+    , stdio: fromMaybe undefined options.stdio
     , shell: case options.shell of
         Nothing -> undefined
         Just DefaultShell -> (unsafeCoerce :: Boolean -> ActualShellOption) true
@@ -691,13 +721,19 @@ spawn' file args buildOptions = runEffectFn3 spawnImpl file args jsOptions
     , killSignal: Nothing
     }
 
-foreign import spawnImpl :: EffectFn3 String (Array String) JsSpawnOptions ChildProcess
+foreign import spawnImpl
+  :: forall stdIn stdOut stdErr ipc
+   . EffectFn3
+       String
+       (Array String)
+       (JsSpawnOptions stdIn stdOut stdErr ipc)
+       (ChildProcess stdIn stdOut stdErr ipc)
 
-type SpawnSyncOptions =
+type SpawnSyncOptions stdIn stdOut stdErr ipc =
   { cwd :: Maybe String
   , input :: Maybe ImmutableBuffer
   , argv0 :: Maybe String
-  , stdio :: Maybe (Array (Maybe StdIOBehaviour))
+  , stdio :: Maybe (StdIoOption stdIn stdOut stdErr ipc)
   , env :: Maybe (Object String)
   , uid :: Maybe Int
   , gid :: Maybe Int
@@ -709,11 +745,11 @@ type SpawnSyncOptions =
   , windowsHide :: Maybe Boolean
   }
 
-type JsSpawnSyncOptions =
+type JsSpawnSyncOptions stdIn stdOut stdErr ipc =
   { cwd :: String
   , input :: ImmutableBuffer
   , argv0 :: String
-  , stdio :: ActualStdIOOptions
+  , stdio :: StdIoOption stdIn stdOut stdErr ipc
   , env :: Object String
   , uid :: Int
   , gid :: Int
@@ -749,7 +785,12 @@ type JsSpawnSyncResult =
 spawnSync :: String -> Array String -> Effect SpawnSyncResult
 spawnSync file args = spawnSync' file args identity
 
-spawnSync' :: String -> Array String -> (SpawnSyncOptions -> SpawnSyncOptions) -> Effect SpawnSyncResult
+spawnSync'
+  :: forall stdIn stdOut stdErr ipc
+   . String
+  -> Array String
+  -> (SpawnSyncOptions (write :: Write) (read :: Read) (read :: Read) False -> SpawnSyncOptions stdIn stdOut stdErr ipc)
+  -> Effect SpawnSyncResult
 spawnSync' file args buildOptions = do
   jsResult <- runEffectFn3 spawnSyncImpl file args jsOptions
   pure
@@ -767,7 +808,7 @@ spawnSync' file args buildOptions = do
     { cwd: fromMaybe undefined options.cwd
     , input: fromMaybe undefined options.input
     , argv0: fromMaybe undefined options.argv0
-    , stdio: maybe undefined toActualStdIOOptions options.stdio
+    , stdio: fromMaybe undefined options.stdio
     , env: fromMaybe undefined options.env
     , uid: fromMaybe undefined options.uid
     , gid: fromMaybe undefined options.gid
@@ -783,7 +824,7 @@ spawnSync' file args buildOptions = do
     , windowsVerbatimArguments: fromMaybe undefined options.windowsVerbatimArguments
     }
 
-  defaults :: SpawnSyncOptions
+  defaults :: SpawnSyncOptions (write :: Write) (read :: Read) (read :: Read) False
   defaults =
     { cwd: Nothing
     , input: Nothing
@@ -800,9 +841,9 @@ spawnSync' file args buildOptions = do
     , windowsHide: Nothing
     }
 
-foreign import spawnSyncImpl :: EffectFn3 String (Array String) JsSpawnSyncOptions JsSpawnSyncResult
+foreign import spawnSyncImpl :: forall stdIn stdOut stdErr ipc. EffectFn3 String (Array String) (JsSpawnSyncOptions stdIn stdOut stdErr ipc) JsSpawnSyncResult
 
-type ForkOptions =
+type ForkOptions stdIn stdOut stdErr ipc =
   { cwd :: Maybe String
   , detached :: Maybe Boolean
   , env :: Maybe (Object String)
@@ -812,13 +853,13 @@ type ForkOptions =
   , serialization :: Maybe SerializationOption
   , signal :: Maybe AbortSignal
   , killSignal :: Maybe (Either String Int)
-  , stdio :: Maybe (Array (Maybe StdIOBehaviour))
+  , stdio :: Maybe (StdIoOption stdIn stdOut stdErr ipc)
   , uid :: Maybe Int
   , windowsVerbatimArguments :: Maybe Boolean
   , timeout :: Maybe Int
   }
 
-type JsForkOptions =
+type JsForkOptions stdIn stdOut stdErr ipc =
   { cwd :: String
   , detached :: Boolean
   , env :: Object String
@@ -829,19 +870,19 @@ type JsForkOptions =
   , signal :: AbortSignal
   , killSignal :: KillSignal
   -- silent is ignored due to stdio
-  , stdio :: ActualStdIOOptions
+  , stdio :: StdIoOption stdIn stdOut stdErr ipc
   , uid :: Int
   , windowsVerbatimArguments :: Boolean
   , timeout :: Int
   }
 
-fork :: String -> Array String -> Effect ChildProcess
-fork modulePath args = fork' modulePath args identity
+fork :: String -> Array String -> Effect (ChildProcess (write :: Write) (read :: Read) (read :: Read) True)
+fork modPath args = fork' modPath args identity
 
 -- | A special case of `spawn` for creating Node.js child processes. The first
 -- | argument is the module to be run, and the second is the argv (command line
 -- | arguments).
-fork' :: String -> Array String -> (ForkOptions -> ForkOptions) -> Effect ChildProcess
+fork' :: forall stdIn stdOut stdErr. String -> Array String -> (ForkOptions (write :: Write) (read :: Read) (read :: Read) True -> ForkOptions stdIn stdOut stdErr True) -> Effect (ChildProcess stdIn stdOut stdErr True)
 fork' modulePath args buildOptions = runEffectFn3 forkImpl modulePath args jsOptions
   where
   options = buildOptions defaults
@@ -855,12 +896,13 @@ fork' modulePath args buildOptions = runEffectFn3 forkImpl modulePath args jsOpt
     , serialization: maybe undefined toJsSerialization options.serialization
     , signal: fromMaybe undefined options.signal
     , killSignal: fromMaybe undefined $ map (either (unsafeCoerce :: String -> KillSignal) (unsafeCoerce :: Int -> KillSignal)) options.killSignal
-    , stdio: maybe undefined toActualStdIOOptions options.stdio
+    , stdio: fromMaybe undefined options.stdio
     , uid: fromMaybe undefined options.uid
     , windowsVerbatimArguments: fromMaybe undefined options.windowsVerbatimArguments
     , timeout: fromMaybe undefined options.timeout
     }
 
+  defaults :: ForkOptions (write :: Write) (read :: Read) (read :: Read) True
   defaults =
     { cwd: Nothing
     , detached: Nothing
@@ -871,17 +913,15 @@ fork' modulePath args buildOptions = runEffectFn3 forkImpl modulePath args jsOpt
     , serialization: Nothing
     , signal: Nothing
     , killSignal: Nothing
-    , stdio: Nothing
+    , stdio: Just (toStdIoOption (_ { ipc = Just $ const useIpc }))
     , uid: Nothing
     , windowsVerbatimArguments: Nothing
     , timeout: Nothing
     }
 
-foreign import forkImpl :: EffectFn3 String (Array String) JsForkOptions ChildProcess
+foreign import forkImpl :: forall stdIn stdOut stdErr. EffectFn3 String (Array String) (JsForkOptions stdIn stdOut stdErr True) (ChildProcess stdIn stdOut stdErr True)
 
 foreign import undefined :: forall a. a
-
-foreign import data ActualExecSyncOptions :: Type
 
 -- | An error which occurred inside a child process.
 type Error =
@@ -894,91 +934,3 @@ type Error =
 -- | inside an Effect or Aff computation (for example).
 toStandardError :: Error -> Exception.Error
 toStandardError = unsafeCoerce
-
--- | Behaviour for standard IO streams (eg, standard input, standard output) of
--- | a child process.
--- |
--- | * `Pipe`: creates a pipe between the child and parent process, which can
--- |   then be accessed as a `Stream` via the `stdin`, `stdout`, or `stderr`
--- |   functions.
--- | * `Ignore`: ignore this stream. This will cause Node to open /dev/null and
--- |   connect it to the stream.
--- | * `ShareStream`: Connect the supplied stream to the corresponding file
--- |    descriptor in the child.
--- | * `ShareFD`: Connect the supplied file descriptor (which should be open
--- |   in the parent) to the corresponding file descriptor in the child.
--- | * `Overlapped`: Same as `pipe` on `non-Windows` OSes. For Windows, see
--- |    https://learn.microsoft.com/en-us/windows/win32/fileio/synchronous-and-asynchronous-i-o
--- | * `Ipc`: Enables `send`/`disconnect`/`onDisconnect`/`onMessage`. Only 1 `Ipd` per `stdio` file descriptor.
-data StdIOBehaviour
-  = Pipe
-  | Ignore
-  | ShareStream (forall r. Stream r)
-  | ShareFD FS.FileDescriptor
-  | Overlapped
-  | Ipc
-
--- | Create pipes for each of the three standard IO streams.
-pipe :: Array (Maybe StdIOBehaviour)
-pipe = map Just [ Pipe, Pipe, Pipe ]
-
--- | Share `stdin` with `stdin`, `stdout` with `stdout`,
--- | and `stderr` with `stderr`.
-inherit :: Array (Maybe StdIOBehaviour)
-inherit = map Just
-  [ inheritStdin
-  , inheritStdout
-  , inheritStderr
-  ]
-
--- | Set the stdin/stdout/stderr or fallback to inherit the process's stdin/stdout/stderr.
-inheritOr
-  :: { stdin :: StdIOBehaviour -> Maybe StdIOBehaviour
-     , stdout :: StdIOBehaviour -> Maybe StdIOBehaviour
-     , stderr :: StdIOBehaviour -> Maybe StdIOBehaviour
-     }
-  -> Array (Maybe StdIOBehaviour)
-inheritOr r =
-  [ r.stdin inheritStdin
-  , r.stdout inheritStdout
-  , r.stderr inheritStderr
-  ]
-
-inheritStdin :: StdIOBehaviour
-inheritStdin = ShareStream process.stdin
-
-inheritStdout :: StdIOBehaviour
-inheritStdout = ShareStream process.stdout
-
-inheritStderr :: StdIOBehaviour
-inheritStderr = ShareStream process.stderr
-
-foreign import process :: forall props. { | props }
-
--- | Ignore all streams.
-ignore :: Array (Maybe StdIOBehaviour)
-ignore = map Just [ Ignore, Ignore, Ignore ]
-
-stdIOBehavior :: { stdin :: Maybe StdIOBehaviour, stdout :: Maybe StdIOBehaviour, stderr :: Maybe StdIOBehaviour } -> Array (Maybe StdIOBehaviour)
-stdIOBehavior r = [ r.stdin, r.stdout, r.stderr ]
-
--- Helpers
-
-foreign import data ActualStdIOBehaviour :: Type
-
-toActualStdIOBehaviour :: StdIOBehaviour -> ActualStdIOBehaviour
-toActualStdIOBehaviour b = case b of
-  Pipe -> c "pipe"
-  Ignore -> c "ignore"
-  ShareFD x -> c x
-  ShareStream stream -> c stream
-  Overlapped -> c "overlapped"
-  Ipc -> c "ipc"
-  where
-  c :: forall a. a -> ActualStdIOBehaviour
-  c = unsafeCoerce
-
-type ActualStdIOOptions = Array (Nullable ActualStdIOBehaviour)
-
-toActualStdIOOptions :: Array (Maybe StdIOBehaviour) -> ActualStdIOOptions
-toActualStdIOOptions = map (toNullable <<< map toActualStdIOBehaviour)
