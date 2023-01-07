@@ -193,6 +193,10 @@ type JsSendOptions =
   { keepOpen :: Boolean
   }
 
+-- | Send messages to the (`nodejs`) child process.
+-- |
+-- | See the [node documentation](https://nodejs.org/api/child_process.html#child_process_subprocess_send_message_sendhandle_options_callback)
+-- | for in-depth documentation.
 send
   :: forall stdIn stdOut stdErr
    . ChildProcess stdIn stdOut stdErr True
@@ -247,18 +251,6 @@ foreign import stderr
   :: forall r stdIn stdOut ipc
    . ChildProcess stdIn stdOut (read :: Read | r) ipc
   -> Stream (read :: Read | r)
-
--- | Send messages to the (`nodejs`) child process.
--- |
--- | See the [node documentation](https://nodejs.org/api/child_process.html#child_process_subprocess_send_message_sendhandle_options_callback)
--- | for in-depth documentation.
--- send
---   :: forall props
---    . { | props }
---   -> Handle
---   -> ChildProcess
---   -> Effect Boolean
--- send msg handle (ChildProcess cp) = mkEffect \_ -> runFn2 cp.send msg handle
 
 -- | Handle the `"close"` signal.
 onClose :: forall stdIn stdOut stdErr ipc. ChildProcess stdIn stdOut stdErr ipc -> (Maybe Int -> Maybe String -> Effect Unit) -> Effect Unit
