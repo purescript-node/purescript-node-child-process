@@ -171,13 +171,15 @@ choicesStdOutErr =
 -- | spawn "cmd" [ "args" ]
 -- | ```
 -- | ```
--- | -- use override stdin/stdout/stderr with
--- | -- `"inherit"`, a write stream
+-- | -- Override stdin/stdout/stderr with
+-- | -- 1. `"inherit"` - make `stdin` share `process.stdin`
+-- | -- 2. a write stream (e.g. to a file or HTTP response)
+-- | -- 3. a file descriptor, enabling content to be read from / written to the file
 -- | `spawn' "cmd" [ "args" ] (_ 
 -- |    { stdio = Just $ 
 -- |        toStdIoOption (_ 
 -- |            { stdin = Just inherit
--- |            , stdout = Just $ shareReadStream someReadStream
+-- |            , stdout = Just $ shareWriteStream shareWriteStream
 -- |            , stderr = Just $ fileDescriptor fd
 -- |            }
 -- |        )
