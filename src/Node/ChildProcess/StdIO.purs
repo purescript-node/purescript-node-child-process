@@ -22,9 +22,8 @@ import Prelude
 import Data.Maybe (Maybe(..), maybe)
 import Foreign (Foreign, unsafeToForeign)
 import Node.FS (FileDescriptor)
-import Node.Stream (Read, Readable, Stream, Writable, Write, Duplex)
+import Node.Stream (Duplex, Readable, Stream, Writable)
 import Prim.Boolean (True, False)
-import Type.Proxy (Proxy)
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | Behaviour for standard IO streams (eg, standard input, standard output) of
@@ -47,7 +46,7 @@ import Unsafe.Coerce (unsafeCoerce)
 -- | index `0`, `1`, or `2`, it is the same as `"ignore"`.
 -- | Since it's used to inherit the parent process' `stdin`/`stdout`/`stderr`,
 -- | this functionality is built into the `toStdIOOption` function
-foreign import data StdIO :: Row Type -> Type
+foreign import data StdIO :: Type -> Type
 
 -- | Creates a pipe between the child and parent process, which can
 -- |   then be accessed as a `Stream` via the `stdin`, `stdout`, or `stderr`
@@ -55,10 +54,10 @@ foreign import data StdIO :: Row Type -> Type
 pipe :: forall pipe r. { usePipe :: Stream pipe | r } -> Stream pipe
 pipe = _.usePipe
 
-pipeRead :: StdIO (read :: Read)
+pipeRead :: StdIO (Readable ())
 pipeRead = unsafeCoerce "pipe"
 
-pipeWrite :: StdIO (write :: Write)
+pipeWrite :: StdIO (Writable ())
 pipeWrite = unsafeCoerce "pipe"
 
 -- | Creates a pipe between the child and parent process, which can
@@ -69,36 +68,36 @@ pipeWrite = unsafeCoerce "pipe"
 overlapped :: forall overlapped r. { useOverlapped :: Stream overlapped | r } -> Stream overlapped
 overlapped { useOverlapped } = useOverlapped
 
-overlappedRead :: StdIO (read :: Read)
+overlappedRead :: StdIO (Readable ())
 overlappedRead = unsafeCoerce "overlapped"
 
-overlappedWrite :: StdIO (write :: Write)
+overlappedWrite :: StdIO (Writable ())
 overlappedWrite = unsafeCoerce "overlapped"
 
 inherit :: forall inherit r. { useInherit :: Stream inherit | r } -> Stream inherit
 inherit { useInherit } = useInherit
 
-inheritRead :: StdIO (read :: Read)
+inheritRead :: StdIO (Readable ())
 inheritRead = unsafeCoerce "inherit"
 
-inheritWrite :: StdIO (write :: Write)
+inheritWrite :: StdIO (Writable ())
 inheritWrite = unsafeCoerce "inherit"
 
 type IgnoreMsg = "'ignore' was used for this IO slot, so this stream on the child process doesn't exist."
 
-ignore :: forall a. a -> StdIO (read :: Proxy IgnoreMsg, write :: Proxy IgnoreMsg)
+ignore :: forall a. a -> StdIO Void
 ignore _ = unsafeCoerce "ignore"
 
-fileDescriptor :: forall a. FileDescriptor -> a -> StdIO (read :: Read, write :: Write)
+fileDescriptor :: forall a. FileDescriptor -> a -> StdIO Duplex
 fileDescriptor fd _ = unsafeCoerce fd
 
-shareReadStream :: forall r. Readable () -> { useReadStream :: Readable () -> StdIO (read :: Read) | r } -> StdIO (read :: Read)
+shareReadStream :: forall r. Readable () -> { useReadStream :: Readable () -> StdIO (Readable ()) | r } -> StdIO (Readable ())
 shareReadStream s { useReadStream } = useReadStream s
 
-shareWriteStream :: forall r. Writable () -> { useWriteStream :: Writable () -> StdIO (write :: Write) | r } -> StdIO (write :: Write)
+shareWriteStream :: forall r. Writable () -> { useWriteStream :: Writable () -> StdIO (Writable ()) | r } -> StdIO (Writable ())
 shareWriteStream s { useWriteStream } = useWriteStream s
 
-shareDuplexStream :: forall r. Duplex -> { useDuplexStream :: Duplex -> StdIO (read :: Read, write :: Write) | r } -> StdIO (read :: Read, write :: Write)
+shareDuplexStream :: forall r. Duplex -> { useDuplexStream :: Duplex -> StdIO Duplex | r } -> StdIO Duplex
 shareDuplexStream s { useDuplexStream } = useDuplexStream s
 
 newtype IpcOption :: Boolean -> Type
@@ -110,22 +109,22 @@ useIpc = IpcOption true
 noIpc :: IpcOption False
 noIpc = IpcOption false
 
-foreign import data StdIoOption :: Row Type -> Row Type -> Row Type -> Boolean -> Type
+foreign import data StdIoOption :: Type -> Type -> Type -> Boolean -> Type
 
 type StdInChoices =
-  { usePipe :: StdIO (write :: Write)
-  , useOverlapped :: StdIO (write :: Write)
-  , useInherit :: StdIO (read :: Read)
-  , useReadStream :: Readable () -> StdIO (read :: Read)
-  , useDuplexStream :: Duplex -> StdIO (read :: Read, write :: Write)
+  { usePipe :: StdIO (Writable ())
+  , useOverlapped :: StdIO (Writable ())
+  , useInherit :: StdIO (Readable ())
+  , useReadStream :: Readable () -> StdIO (Readable ())
+  , useDuplexStream :: Duplex -> StdIO Duplex
   }
 
 type StdOutErrChoices =
-  { usePipe :: StdIO (read :: Read)
-  , useOverlapped :: StdIO (read :: Read)
-  , useInherit :: StdIO (write :: Write)
-  , useWriteStream :: Writable () -> StdIO (write :: Write)
-  , useDuplexStream :: Duplex -> StdIO (read :: Read, write :: Write)
+  { usePipe :: StdIO (Readable ())
+  , useOverlapped :: StdIO (Readable ())
+  , useInherit :: StdIO (Writable ())
+  , useWriteStream :: Writable () -> StdIO (Writable ())
+  , useDuplexStream :: Duplex -> StdIO Duplex
   }
 
 -- | Ignore this type and just look at `toStdIoOption`
