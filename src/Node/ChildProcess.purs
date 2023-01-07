@@ -42,6 +42,7 @@ module Node.ChildProcess
   , spawn
   , spawn'
   , SpawnOptions
+  , SpawnSyncResult
   , spawnSync
   , spawnSync'
   , SpawnSyncOptions
@@ -726,11 +727,41 @@ type JsSpawnSyncOptions =
   , windowsHide :: Boolean
   }
 
-spawnSync :: String -> Array String -> Effect ChildProcess
+type SpawnSyncResult =
+  { pid :: Pid
+  , output :: Array Foreign
+  , stdout :: ImmutableBuffer
+  , stderr :: ImmutableBuffer
+  , status :: Maybe Int
+  , signal :: Maybe String
+  , error :: Maybe Error
+  }
+
+type JsSpawnSyncResult =
+  { pid :: Pid
+  , output :: Array Foreign
+  , stdout :: ImmutableBuffer
+  , stderr :: ImmutableBuffer
+  , status :: Nullable Int
+  , signal :: Nullable String
+  , error :: Nullable Error
+  }
+
+spawnSync :: String -> Array String -> Effect SpawnSyncResult
 spawnSync file args = spawnSync' file args identity
 
-spawnSync' :: String -> Array String -> (SpawnSyncOptions -> SpawnSyncOptions) -> Effect ChildProcess
-spawnSync' file args buildOptions = runEffectFn3 spawnSyncImpl file args jsOptions
+spawnSync' :: String -> Array String -> (SpawnSyncOptions -> SpawnSyncOptions) -> Effect SpawnSyncResult
+spawnSync' file args buildOptions = do
+  jsResult <- runEffectFn3 spawnSyncImpl file args jsOptions
+  pure
+    { pid: jsResult.pid
+    , output: jsResult.output
+    , stdout: jsResult.stdout
+    , stderr: jsResult.stderr
+    , status: toMaybe jsResult.status
+    , signal: toMaybe jsResult.signal
+    , error: toMaybe jsResult.error
+    }
   where
   options = buildOptions defaults
   jsOptions =
@@ -770,7 +801,7 @@ spawnSync' file args buildOptions = runEffectFn3 spawnSyncImpl file args jsOptio
     , windowsHide: Nothing
     }
 
-foreign import spawnSyncImpl :: EffectFn3 String (Array String) JsSpawnSyncOptions ChildProcess
+foreign import spawnSyncImpl :: EffectFn3 String (Array String) JsSpawnSyncOptions JsSpawnSyncResult
 
 type ForkOptions =
   { cwd :: Maybe String
