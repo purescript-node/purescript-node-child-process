@@ -3,11 +3,11 @@
 export { 
   spawn as spawnImpl, 
   spawnSync as spawnSyncImpl,
-  // exec as execImpl, 
-  // execFile as execFileImpl, 
-  // execSync as execSyncImpl, 
-  // execFileSync as execFileSyncImpl, 
-  // fork as forkImpl 
+  exec as execImpl, 
+  execFile as execFileImpl, 
+  execSync as execSyncImpl, 
+  execFileSync as execFileSyncImpl, 
+  fork as forkImpl 
 } from "node:child_process";
 
 export function channelImpl(cp) {
