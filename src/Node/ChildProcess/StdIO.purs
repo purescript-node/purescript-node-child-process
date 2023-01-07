@@ -92,14 +92,14 @@ ignore _ = unsafeCoerce "ignore"
 fileDescriptor :: forall a. FileDescriptor -> a -> StdIO (read :: Read, write :: Write)
 fileDescriptor fd _ = unsafeCoerce fd
 
-shareReadStream :: forall a. Readable () -> a -> StdIO (read :: Read)
-shareReadStream s _ = unsafeCoerce s
+shareReadStream :: forall r. Readable () -> { useReadStream :: Readable () -> StdIO (read :: Read) | r } -> StdIO (read :: Read)
+shareReadStream s { useReadStream } = useReadStream s
 
-shareWriteStream :: forall a. Writable () -> a -> StdIO (write :: Write)
-shareWriteStream s _ = unsafeCoerce s
+shareWriteStream :: forall r. Writable () -> { useWriteStream :: Writable () -> StdIO (write :: Write) | r } -> StdIO (write :: Write)
+shareWriteStream s { useWriteStream } = useWriteStream s
 
-shareDuplexStream :: forall a. Duplex -> a -> StdIO (read :: Read, write :: Write)
-shareDuplexStream s _ = unsafeCoerce s
+shareDuplexStream :: forall r. Duplex -> { useDuplexStream :: Duplex -> StdIO (read :: Read, write :: Write) | r } -> StdIO (read :: Read, write :: Write)
+shareDuplexStream s { useDuplexStream } = useDuplexStream s
 
 newtype IpcOption :: Boolean -> Type
 newtype IpcOption used = IpcOption Boolean
@@ -116,12 +116,16 @@ type StdInChoices =
   { usePipe :: StdIO (write :: Write)
   , useOverlapped :: StdIO (write :: Write)
   , useInherit :: StdIO (read :: Read)
+  , useReadStream :: Readable () -> StdIO (read :: Read)
+  , useDuplexStream :: Duplex -> StdIO (read :: Read, write :: Write)
   }
 
 type StdOutErrChoices =
   { usePipe :: StdIO (read :: Read)
   , useOverlapped :: StdIO (read :: Read)
   , useInherit :: StdIO (write :: Write)
+  , useWriteStream :: Writable () -> StdIO (write :: Write)
+  , useDuplexStream :: Duplex -> StdIO (read :: Read, write :: Write)
   }
 
 -- | Ignore this type and just look at `toStdIoOption`
@@ -146,6 +150,8 @@ choicesStdin =
   { usePipe: pipeWrite
   , useOverlapped: overlappedWrite
   , useInherit: inheritRead
+  , useReadStream: unsafeCoerce
+  , useDuplexStream: unsafeCoerce
   }
 
 -- Using `pipe` or `overlapped` means we can read the child process' output, so we use `read` here.
@@ -155,16 +161,24 @@ choicesStdOutErr =
   { usePipe: pipeRead
   , useOverlapped: overlappedRead
   , useInherit: inheritWrite
+  , useWriteStream: unsafeCoerce
+  , useDuplexStream: unsafeCoerce
   }
 
--- | Intended usage is below. 
+-- | Examples of intended usage are below. 
 -- | ```
+-- | -- use the defaults that Node provides
+-- | spawn "cmd" [ "args" ]
+-- | ```
+-- | ```
+-- | -- use override stdin/stdout/stderr with
+-- | -- `"inherit"`, a write stream
 -- | `spawn' "cmd" [ "args" ] (_ 
 -- |    { stdio = Just $ 
 -- |        toStdIoOption (_ 
 -- |            { stdin = Just inherit
--- |            , stdout = Just $ shareStream someWriteStream
--- |            , stderr = Just ignore
+-- |            , stdout = Just $ shareReadStream someReadStream
+-- |            , stderr = Just $ fileDescriptor fd
 -- |            }
 -- |        )
 -- |    })
