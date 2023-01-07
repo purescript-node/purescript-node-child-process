@@ -285,7 +285,7 @@ type ExecOptions =
   , windowsHide :: Maybe Boolean
   }
 
-type JsExecAsyncOptions =
+type JsExecOptions =
   { cwd :: String
   , env :: Object String
   , encoding :: String
@@ -345,7 +345,7 @@ exec' cmd buildOptions cb = runEffectFn3 execImpl cmd jsOptions $ mkEffectFn3 \e
     , windowsHide: Nothing
     }
 
-foreign import execImpl :: EffectFn3 String JsExecAsyncOptions (EffectFn3 (Nullable Exception.Error) ImmutableBuffer ImmutableBuffer Unit) ChildProcess
+foreign import execImpl :: EffectFn3 String JsExecOptions (EffectFn3 (Nullable Exception.Error) ImmutableBuffer ImmutableBuffer Unit) ChildProcess
 
 data Shell
   = DefaultShell
@@ -373,7 +373,7 @@ type ExecFileOptions =
   , windowsVerbatimArguments :: Maybe Boolean
   }
 
-type JsExecFileAsyncOptions =
+type JsExecFileOptions =
   { cwd :: String
   , env :: Object String
   , encoding :: String
@@ -431,7 +431,7 @@ execFile' file args buildOptions cb = runEffectFn4 execFileImpl file args jsOpti
     , windowsVerbatimArguments: Nothing
     }
 
-foreign import execFileImpl :: EffectFn4 (String) (Array String) (JsExecFileAsyncOptions) (EffectFn3 (Nullable Exception.Error) ImmutableBuffer ImmutableBuffer Unit) (ChildProcess)
+foreign import execFileImpl :: EffectFn4 (String) (Array String) (JsExecFileOptions) (EffectFn3 (Nullable Exception.Error) ImmutableBuffer ImmutableBuffer Unit) (ChildProcess)
 
 type ExecSyncOptions =
   { cwd :: Maybe String
@@ -610,7 +610,7 @@ type SpawnOptions =
   , killSignal :: Maybe (Either String Int)
   }
 
-type JsSpawnAsyncOptions =
+type JsSpawnOptions =
   { cwd :: String
   , env :: Object String
   , argv0 :: String
@@ -675,7 +675,7 @@ spawn' file args buildOptions = runEffectFn3 spawnImpl file args jsOptions
     , killSignal: Nothing
     }
 
-foreign import spawnImpl :: EffectFn3 String (Array String) JsSpawnAsyncOptions ChildProcess
+foreign import spawnImpl :: EffectFn3 String (Array String) JsSpawnOptions ChildProcess
 
 type SpawnSyncOptions =
   { cwd :: Maybe String
