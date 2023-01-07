@@ -9,7 +9,7 @@ import Effect (Effect)
 import Effect.Console (log)
 import Node.Buffer as Buffer
 import Node.Buffer.Immutable as ImmutableBuffer
-import Node.ChildProcess (exec, execSync', kill', onError, onExit, spawn, stdout)
+import Node.ChildProcess (Exit(..), exec, execSync', kill', onError, onExit, spawn, stdout)
 import Node.Encoding (Encoding(UTF8))
 import Node.Encoding as NE
 import Node.Stream (onData)
@@ -26,22 +26,20 @@ main = do
   log "doesn't perform effects too early"
   spawn "ls" [ "-la" ] >>= \ls -> do
     let _ = kill' SIGTERM ls
-    onExit ls \exit ->
-      case exit.exitCode of
-        Just 0 ->
-          log "All good!"
-        _ -> do
-          log ("Bad exit: expected `Normally 0`, got: " <> show exit)
+    onExit ls case _ of
+      ExitCode 0 ->
+        log "All good!"
+      exit -> do
+        log ("Bad exit: expected `Normally 0`, got: " <> show exit)
 
   log "kills processes"
   spawn "ls" [ "-la" ] >>= \ls -> do
     _ <- kill' SIGTERM ls
-    onExit ls \exit ->
-      case exit.signalCode >>= _.signal of
-        Just SIGTERM ->
-          log "All good!"
-        _ -> do
-          log ("Bad exit: expected `BySignal SIGTERM`, got: " <> show exit)
+    onExit ls case _ of
+      SignalCode _ sig | Just SIGTERM <- sig ->
+        log "All good!"
+      exit -> do
+        log ("Bad exit: expected `BySignal SIGTERM`, got: " <> show exit)
 
   log "exec"
   execLs
