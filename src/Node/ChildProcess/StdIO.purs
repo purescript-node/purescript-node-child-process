@@ -1,3 +1,5 @@
+-- | See https://nodejs.org/api/child_process.html#optionsstdio
+-- | for full context.
 module Node.ChildProcess.StdIO
   ( StdIO
   , pipe
@@ -36,16 +38,13 @@ import Unsafe.Coerce (unsafeCoerce)
 -- |    https://learn.microsoft.com/en-us/windows/win32/fileio/synchronous-and-asynchronous-i-o
 -- | * `Ignore`: ignore this stream. This will cause Node to open /dev/null and
 -- |   connect it to the stream.
+-- | * `Inherit`: share the same stream as the parent process. When used
+-- |   in any other place besides indices `0`, `1`, and `2` (i.e. `stdin`/`stdout`/`stderr`)
+-- |   it's the same as `ignore`. Thus, this functionality is built into the `toStdIoOption` function
 -- | * `ShareStream`: Connect the supplied stream to the corresponding file
 -- |    descriptor in the child.
 -- | * `ShareFD`: Connect the supplied file descriptor (which should be open
 -- |   in the parent) to the corresponding file descriptor in the child.
--- | * `Ipc`: Enables `send`/`disconnect`/`onDisconnect`/`onMessage`. Only 1 `Ipc` per `stdio` file descriptor.
--- |
--- | Note: `"inherit"` is not supported. When used in any other `stdio` slot besides
--- | index `0`, `1`, or `2`, it is the same as `"ignore"`.
--- | Since it's used to inherit the parent process' `stdin`/`stdout`/`stderr`,
--- | this functionality is built into the `toStdIOOption` function
 foreign import data StdIO :: Type -> Type
 
 -- | Creates a pipe between the child and parent process, which can
@@ -100,6 +99,8 @@ shareWriteStream s { useWriteStream } = useWriteStream s
 shareDuplexStream :: forall r. Duplex -> { useDuplexStream :: Duplex -> StdIO Duplex | r } -> StdIO Duplex
 shareDuplexStream s { useDuplexStream } = useDuplexStream s
 
+-- | `Ipc`: Enables `send`/`disconnect`/`onDisconnect`/`onMessage`. Only 1 `Ipc` per `stdio` file descriptor.
+-- | Similar to `inherit`, this value is handled specially in `toStdIoOption`.
 newtype IpcOption :: Boolean -> Type
 newtype IpcOption used = IpcOption Boolean
 
@@ -187,6 +188,16 @@ choicesStdOutErr =
 -- |
 -- | The verbosity of the `ConfigureStdIoOptionsFn` type is needed
 -- | to make `stdin`/`stdout`/`stderr` type safe.
+-- |
+-- | This function makes the following guarantees about the resulting `stdio` array:
+-- | - if the `stdio` option is `Nothing`, the defaults will be used
+-- | - if the `stdio` option is `Just` and is overridden using this function, then:
+-- |    - `stdio[0]` stores `null` or `childProcess.stdin` (depending on option)
+-- |    - `stdio[1]` stores `null` or `childProcess.stdout` (depending on option)
+-- |    - `stdio[2]` stores `null` or `childProcess.stderr` (depending on option)
+-- |    - `stdio[3]` stores `null` or `childProcess.ipc` (depending on option)
+-- |    - `stdio[4]` stores `null` or `extra[0]` (if supplied)
+-- |    - `stdio[n+4]` stores `null` or `extra[n]` (if supplied)
 toStdIoOption
   :: forall stdInUsed stdOutUsed stdErrUsed ipcUsed
    . ConfigureStdIoOptionsFn stdInUsed stdOutUsed stdErrUsed ipcUsed

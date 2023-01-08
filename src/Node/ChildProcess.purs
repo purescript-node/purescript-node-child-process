@@ -4,7 +4,7 @@
 -- | It is intended to be imported qualified, as follows:
 -- |
 -- | ```purescript
--- | import Node.ChildProcess (ChildProcess, CHILD_PROCESS)
+-- | import Node.ChildProcess (ChildProcess)
 -- | import Node.ChildProcess as ChildProcess
 -- | ```
 -- |
