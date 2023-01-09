@@ -44,9 +44,11 @@ nonExistentExecutable cb = do
   let log' = logTest "nonExistentExecutable"
   log' "emits an error if executable does not exist"
   ch <- spawn "this-does-not-exist" [] defaultSpawnOptions
-  onError ch (\err -> log' err.code *> cb (Left $ error err.code))
-  log' "nonexistent executable: all good."
-  cb (Right unit)
+  onError ch (\err -> do
+    log' err.code
+    log' "nonexistent executable: all good."
+    cb (Right unit)
+  )
 
 spawnLsErr :: (Either Error Unit -> Effect Unit) -> Effect Unit
 spawnLsErr cb = do
