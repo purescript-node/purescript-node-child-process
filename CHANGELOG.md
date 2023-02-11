@@ -8,6 +8,8 @@ Breaking changes:
 
 New features:
 
+- Added `shell` and `timeout`, `killSignal` options to `spawn` functions
+
 Bugfixes:
 
 Other improvements:

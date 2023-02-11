@@ -242,6 +242,9 @@ spawn cmd args = spawnImpl cmd args <<< convertOpts
     { cwd: fromMaybe undefined opts.cwd
     , stdio: toActualStdIOOptions opts.stdio
     , env: toNullable opts.env
+    , shell: fromMaybe undefined opts.shell
+    , timeout: fromMaybe undefined opts.timeout
+    , killSignal: fromMaybe undefined opts.killSignal
     , detached: opts.detached
     , uid: fromMaybe undefined opts.uid
     , gid: fromMaybe undefined opts.gid
@@ -263,6 +266,9 @@ type SpawnOptions =
   { cwd :: Maybe String
   , stdio :: Array (Maybe StdIOBehaviour)
   , env :: Maybe (Object String)
+  , shell :: Maybe String
+  , timeout :: Maybe Number
+  , killSignal :: Maybe Signal
   , detached :: Boolean
   , uid :: Maybe Uid
   , gid :: Maybe Gid
@@ -275,6 +281,9 @@ defaultSpawnOptions =
   { cwd: Nothing
   , stdio: pipe
   , env: Nothing
+  , shell: Nothing
+  , timeout: Nothing
+  , killSignal: Nothing
   , detached: false
   , uid: Nothing
   , gid: Nothing
