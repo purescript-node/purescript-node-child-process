@@ -1,0 +1,29 @@
+export { 
+  exec as execImpl,
+  exec as execOptsImpl,
+  exec as execCbImpl,
+  exec as execOptsCbImpl,
+  execFile as execFileImpl,
+  execFile as execFileOptsImpl,
+  execFile as execFileCbImpl,
+  execFile as execFileOptsCbImpl,
+  spawn as spawnImpl, 
+  spawn as spawnOptsImpl, 
+  execSync as execSyncImpl,
+  execFileSync as execFileSyncImpl,
+  execFileSync as execFileSyncOptsImpl,
+  spawnSync as spawnSyncImpl,
+  spawnSync as spawnSyncOptsImpl,
+  fork as forkImpl,
+  fork as forkOptsImpl,
+} from "child_process";
+
+export const stdin = (cp) => cp.stdin;
+export const stdout = (cp) => cp.stdout;
+export const stderr = (cp) => cp.stderr;
+export const unsafeChannelRefImpl = (cp) => cp.channel.ref();
+export const unsafeChannelUnrefImpl = (cp) => cp.channel.unref();
+export const sendImpl = (cp, msg, handle) => cp.send(msg, handle);
+export const sendOptsImpl = (cp, msg, handle, opts) => cp.send(msg, handle, opts);
+export const sendCbImpl = (cp, msg, handle, cb) => cp.send(msg, handle, cb);
+export const sendOptsCbImpl = (cp, msg, handle, opts, cb) => cp.send(msg, handle, opts, cb);

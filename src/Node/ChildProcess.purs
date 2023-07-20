@@ -34,7 +34,6 @@ module Node.ChildProcess
   , killed
   , signalCode
   , send
-  , Exit(..)
   , spawn
   , SpawnOptions
   , defaultSpawnOptions
@@ -68,6 +67,7 @@ import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, mkEffectFn2, runEffe
 import Foreign (Foreign)
 import Foreign.Object (Object)
 import Node.Buffer (Buffer)
+import Node.ChildProcess.Types (Exit(..))
 import Node.Encoding (Encoding, encodingToNode)
 import Node.Errors.SystemError (SystemError)
 import Node.EventEmitter (EventEmitter, EventHandle(..))
@@ -228,16 +228,6 @@ foreign import spawnFile :: ChildProcess -> String
 
 mkEffect :: forall a. (Unit -> a) -> Effect a
 mkEffect = unsafeCoerce
-
--- | Specifies how a child process exited; normally (with an exit code), or
--- | due to a signal.
-data Exit
-  = Normally Int
-  | BySignal Signal
-
-instance showExit :: Show Exit where
-  show (Normally x) = "Normally " <> show x
-  show (BySignal sig) = "BySignal " <> show sig
 
 -- | Spawn a child process. Note that, in the event that a child process could
 -- | not be spawned (for example, if the executable was not found) this will

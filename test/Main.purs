@@ -7,7 +7,8 @@ import Data.Posix.Signal (Signal(..))
 import Effect (Effect)
 import Effect.Console (log)
 import Node.Buffer as Buffer
-import Node.ChildProcess (Exit(..), defaultExecOptions, defaultExecSyncOptions, defaultSpawnOptions, errorH, exec, execSync, exitH, kill, spawn, stdout)
+import Node.ChildProcess (defaultExecOptions, defaultExecSyncOptions, defaultSpawnOptions, errorH, exec, execSync, exitH, kill, spawn, stdout)
+import Node.ChildProcess.Types (Exit(..))
 import Node.Encoding (Encoding(UTF8))
 import Node.Encoding as NE
 import Node.Errors.SystemError (code)
