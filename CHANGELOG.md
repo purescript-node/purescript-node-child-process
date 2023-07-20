@@ -22,10 +22,30 @@ Breaking changes:
 - Update `pid` type signature to return `Maybe Pid` rather than `Pid` (#44 by @JordanMartinez)
 - Update `kill` returned value from `Effect Unit` to `Effect Boolean` (#44 by @JordanMartinez)
 - Migrate `Error` to `node-os`' `SystemError` (#45 by @JordanMartinez)
-- Moved types from `Node.ChildProces` to ``Node.ChildProces.Types` (#46 by @JordanMartinez)
+- Breaking changes made to the `Exit` type (#46 by @JordanMartinez)
 
-  - `Exit(Normally, BySignal)`
-  - `Handle`
+  - Moved from `Node.ChildProces` to `Node.ChildProces.Types`
+  - Changed the `BySignal`'s constructor's arg type from `Signal` to `String`
+- Breaking changes made to the `Handle` type (#46 by @JordanMartinez)
+  
+  - Moved from `Node.ChildProces` to `Node.ChildProces.Types`
+- Converted `defaultOptions { override = Just 1}` pattern to `(_ { override = Just 1})`  (#46 by @JordanMartinez)
+
+  Before:
+  ```purs
+  spawn "foo" [ "bar" ] (defaultSpawnOptions { someOption = Just overrideValue })
+  spawn "foo" [ "bar" ] defaultSpawnOptions
+  ```
+
+  After:
+  ```purs
+  spawn "foo" [ "bar" ] (_ { someOption = Just overrideValue })
+  spawn "foo" [ "bar" ] identity
+  ```
+- Restrict end-user's ability to configure `stdio` to only those appended to `safeStdio` (#46 by @JordanMartinez)
+
+  See the module docs for `Node.ChildProcess`.
+- All `ChildProcess`-creating functions have been updated to support no args and all args variants (#46 by @JordanMartinez)
 
 New features:
 - Added event handler for `spawn` event (#43 by @JordanMartinez)
@@ -40,6 +60,7 @@ New features:
   - spawnArgs
   - spawnFile
 - Added unsafe, uncurried API of all ChildProcess-creating functions (#46 by @JordanMartinez)
+- Added safe variant of `spawnSync`/`spawnSync'` (#46 by @JordanMartinez)
 
 Bugfixes:
 
@@ -48,6 +69,7 @@ Other improvements:
 - Updated CI `actions/checkout` and `actions/setup-nodee` to `v3` (#41 by @JordanMartinez)
 - Format codebase & enforce formatting in CI via purs-tidy (#42 by @JordanMartinez)
 - Migrate more FFI to uncurried functions (#44 by @JordanMartinez)
+- Updated recommended module alias in docs (#46 by @JordanMartinez)
 
 ## [v9.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v9.0.0) - 2022-04-29
 

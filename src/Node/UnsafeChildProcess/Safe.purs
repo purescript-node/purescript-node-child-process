@@ -20,6 +20,7 @@ module Node.UnsafeChildProcess.Safe
   , signalCode
   , spawnFile
   , spawnArgs
+  , safeStdio
   ) where
 
 import Prelude
@@ -32,7 +33,7 @@ import Data.Posix.Signal as Signal
 import Effect (Effect)
 import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, mkEffectFn2, runEffectFn1, runEffectFn2)
 import Foreign (Foreign)
-import Node.ChildProcess.Types (Exit(..), Handle, UnsafeChildProcess)
+import Node.ChildProcess.Types (Exit(..), Handle, StdIO, UnsafeChildProcess, ipc, pipe)
 import Node.Errors.SystemError (SystemError)
 import Node.EventEmitter (EventEmitter, EventHandle(..))
 import Node.EventEmitter.UtilTypes (EventHandle0, EventHandle1)
@@ -44,7 +45,7 @@ toEventEmitter = unsafeCoerce
 
 closeH :: EventHandle UnsafeChildProcess (Exit -> Effect Unit) (EffectFn2 (Nullable Int) (Nullable String) Unit)
 closeH = EventHandle "close" \cb -> mkEffectFn2 \code signal ->
-  case toMaybe code, toMaybe signal >>= Signal.fromString of
+  case toMaybe code, toMaybe signal of
     Just c, _ -> cb $ Normally c
     _, Just s -> cb $ BySignal s
     _, _ -> unsafeCrashWith $ "Impossible. 'close' event did not get an exit code or kill signal: " <> show code <> "; " <> show signal
@@ -57,7 +58,7 @@ errorH = EventHandle "error" mkEffectFn1
 
 exitH :: EventHandle UnsafeChildProcess (Exit -> Effect Unit) (EffectFn2 (Nullable Int) (Nullable String) Unit)
 exitH = EventHandle "exitH" \cb -> mkEffectFn2 \code signal ->
-  case toMaybe code, toMaybe signal >>= Signal.fromString of
+  case toMaybe code, toMaybe signal of
     Just c, _ -> cb $ Normally c
     _, Just s -> cb $ BySignal s
     _, _ -> unsafeCrashWith $ "Impossible. 'exit' event did not get an exit code or kill signal: " <> show code <> "; " <> show signal
@@ -127,3 +128,10 @@ foreign import signalCodeImpl :: EffectFn1 (UnsafeChildProcess) (Nullable String
 foreign import spawnArgs :: UnsafeChildProcess -> Array String
 
 foreign import spawnFile :: UnsafeChildProcess -> String
+
+-- | Safe default configuration for an UnsafeChildProcess.
+-- | `[ pipe, pipe, pipe, ipc ]`.
+-- | Creates a new stream for `stdin`, `stdout`, and `stderr`
+-- | Also adds an IPC channel, even if it's not used.
+safeStdio :: Array StdIO
+safeStdio = [ pipe, pipe, pipe, ipc ]

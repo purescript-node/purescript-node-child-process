@@ -164,21 +164,23 @@ execOpts command opts = runEffectFn2 execOptsImpl command opts
 
 foreign import execOptsImpl :: forall r. EffectFn2 (String) ({ | r }) (UnsafeChildProcess)
 
-execCb :: String -> (SystemError -> StringOrBuffer -> StringOrBuffer -> Effect Unit) -> Effect UnsafeChildProcess
-execCb command cb = runEffectFn2 execCbImpl command $ mkEffectFn3 cb
+execCb :: String -> (Maybe SystemError -> StringOrBuffer -> StringOrBuffer -> Effect Unit) -> Effect UnsafeChildProcess
+execCb command cb = runEffectFn2 execCbImpl command $ mkEffectFn3 \err sout serr ->
+  cb (toMaybe err) sout serr
 
-foreign import execCbImpl :: EffectFn2 (String) (EffectFn3 SystemError StringOrBuffer StringOrBuffer Unit) (UnsafeChildProcess)
+foreign import execCbImpl :: EffectFn2 (String) (EffectFn3 (Nullable SystemError) StringOrBuffer StringOrBuffer Unit) (UnsafeChildProcess)
 
 execOptsCb
   :: forall r trash
    . Row.Union r trash JsExecOptions
   => String
   -> { | r }
-  -> (SystemError -> StringOrBuffer -> StringOrBuffer -> Effect Unit)
+  -> (Maybe SystemError -> StringOrBuffer -> StringOrBuffer -> Effect Unit)
   -> Effect UnsafeChildProcess
-execOptsCb command opts cb = runEffectFn3 execOptsCbImpl command opts $ mkEffectFn3 cb
+execOptsCb command opts cb = runEffectFn3 execOptsCbImpl command opts $ mkEffectFn3 \err sout serr ->
+  cb (toMaybe err) sout serr
 
-foreign import execOptsCbImpl :: forall r. EffectFn3 (String) ({ | r }) (EffectFn3 SystemError StringOrBuffer StringOrBuffer Unit) (UnsafeChildProcess)
+foreign import execOptsCbImpl :: forall r. EffectFn3 (String) ({ | r }) (EffectFn3 (Nullable SystemError) StringOrBuffer StringOrBuffer Unit) (UnsafeChildProcess)
 
 execFileSync :: String -> Array String -> Effect StringOrBuffer
 execFileSync file args = runEffectFn2 execFileSyncImpl file args
@@ -275,11 +277,12 @@ execFileOptsCb
   => String
   -> Array String
   -> { | r }
-  -> (SystemError -> StringOrBuffer -> StringOrBuffer -> Effect Unit)
+  -> (Maybe SystemError -> StringOrBuffer -> StringOrBuffer -> Effect Unit)
   -> Effect UnsafeChildProcess
-execFileOptsCb file args opts cb = runEffectFn4 execFileOptsCbImpl file args opts $ mkEffectFn3 cb
+execFileOptsCb file args opts cb = runEffectFn4 execFileOptsCbImpl file args opts $ mkEffectFn3 \err sout serr ->
+  cb (toMaybe err) sout serr
 
-foreign import execFileOptsCbImpl :: forall r. EffectFn4 (String) (Array String) ({ | r }) (EffectFn3 SystemError StringOrBuffer StringOrBuffer Unit) (UnsafeChildProcess)
+foreign import execFileOptsCbImpl :: forall r. EffectFn4 (String) (Array String) ({ | r }) (EffectFn3 (Nullable SystemError) StringOrBuffer StringOrBuffer Unit) (UnsafeChildProcess)
 
 type JsSpawnSyncResult =
   { pid :: Pid
@@ -288,7 +291,7 @@ type JsSpawnSyncResult =
   , stderr :: StringOrBuffer
   , status :: Nullable Int
   , signal :: Nullable String
-  , error :: SystemError
+  , error :: Nullable SystemError
   }
 
 spawnSync :: String -> Array String -> Effect JsSpawnSyncResult
@@ -417,10 +420,10 @@ fork' modulePath args opts = runEffectFn3 forkOptsImpl modulePath args opts
 foreign import forkOptsImpl :: forall r. EffectFn3 (String) (Array String) { | r } (UnsafeChildProcess)
 
 -- | Unsafe because child process must be a Node child process and an IPC channel must exist.
-unsafeSend :: Object Foreign -> Nullable Handle -> UnsafeChildProcess -> Effect Boolean
+unsafeSend :: forall messageRows. { | messageRows } -> Nullable Handle -> UnsafeChildProcess -> Effect Boolean
 unsafeSend msg handle cp = runEffectFn3 sendImpl cp msg handle
 
-foreign import sendImpl :: EffectFn3 (UnsafeChildProcess) (Object Foreign) (Nullable Handle) (Boolean)
+foreign import sendImpl :: forall messageRows. EffectFn3 (UnsafeChildProcess) ({ | messageRows }) (Nullable Handle) (Boolean)
 
 type JsSendOptions =
   ( keepAlive :: Boolean
@@ -428,28 +431,28 @@ type JsSendOptions =
 
 -- | Unsafe because child process must be a Node child process and an IPC channel must exist.
 unsafeSendOpts
-  :: forall r trash
+  :: forall r trash messageRows
    . Row.Union r trash JsSendOptions
-  => Object Foreign
+  => { | messageRows }
   -> Nullable Handle
   -> { | r }
   -> UnsafeChildProcess
   -> Effect Boolean
 unsafeSendOpts msg handle opts cp = runEffectFn4 sendOptsImpl cp msg handle opts
 
-foreign import sendOptsImpl :: forall r. EffectFn4 (UnsafeChildProcess) (Object Foreign) (Nullable Handle) ({ | r }) (Boolean)
+foreign import sendOptsImpl :: forall messageRows r. EffectFn4 (UnsafeChildProcess) ({ | messageRows }) (Nullable Handle) ({ | r }) (Boolean)
 
 -- | Unsafe because child process must be a Node child process and an IPC channel must exist.
-unsafeSendCb :: Object Foreign -> Nullable Handle -> (Maybe Error -> Effect Unit) -> UnsafeChildProcess -> Effect Boolean
+unsafeSendCb :: forall messageRows. { | messageRows } -> Nullable Handle -> (Maybe Error -> Effect Unit) -> UnsafeChildProcess -> Effect Boolean
 unsafeSendCb msg handle cb cp = runEffectFn4 sendCbImpl cp msg handle $ mkEffectFn1 \err -> cb $ toMaybe err
 
-foreign import sendCbImpl :: EffectFn4 (UnsafeChildProcess) (Object Foreign) (Nullable Handle) (EffectFn1 (Nullable Error) Unit) (Boolean)
+foreign import sendCbImpl :: forall messageRows. EffectFn4 (UnsafeChildProcess) ({ | messageRows }) (Nullable Handle) (EffectFn1 (Nullable Error) Unit) (Boolean)
 
 -- | Unsafe because child process must be a Node child process and an IPC channel must exist.
 unsafeSendOptsCb
-  :: forall r trash
+  :: forall r trash messageRows
    . Row.Union r trash JsSendOptions
-  => Object Foreign
+  => { | messageRows }
   -> Nullable Handle
   -> { | r }
   -> (Maybe Error -> Effect Unit)
@@ -457,7 +460,7 @@ unsafeSendOptsCb
   -> Effect Boolean
 unsafeSendOptsCb msg handle opts cb cp = runEffectFn5 sendOptsCbImpl cp msg handle opts $ mkEffectFn1 \err -> cb $ toMaybe err
 
-foreign import sendOptsCbImpl :: forall r. EffectFn5 (UnsafeChildProcess) (Object Foreign) (Nullable Handle) ({ | r }) (EffectFn1 (Nullable Error) Unit) (Boolean)
+foreign import sendOptsCbImpl :: forall messageRows r. EffectFn5 (UnsafeChildProcess) ({ | messageRows }) (Nullable Handle) ({ | r }) (EffectFn1 (Nullable Error) Unit) (Boolean)
 
 -- | Unsafe because it depends on whether an IPC channel exists.
 unsafeChannelRef :: UnsafeChildProcess -> Effect Unit

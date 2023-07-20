@@ -3,7 +3,6 @@ module Node.ChildProcess.Types where
 import Prelude
 
 import Data.Nullable (Nullable, null)
-import Data.Posix.Signal (Signal)
 import Node.FS (FileDescriptor)
 import Node.Stream (Stream)
 import Unsafe.Coerce (unsafeCoerce)
@@ -71,7 +70,7 @@ foreign import data StringOrBuffer :: Type
 -- | due to a signal.
 data Exit
   = Normally Int
-  | BySignal Signal
+  | BySignal String
 
 instance showExit :: Show Exit where
   show (Normally x) = "Normally " <> show x
