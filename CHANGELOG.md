@@ -68,7 +68,7 @@ Other improvements:
 - Bumped CI's node version to `lts/*` (#41 by @JordanMartinez)
 - Updated CI `actions/checkout` and `actions/setup-nodee` to `v3` (#41 by @JordanMartinez)
 - Format codebase & enforce formatting in CI via purs-tidy (#42 by @JordanMartinez)
-- Migrate more FFI to uncurried functions (#44 by @JordanMartinez)
+- Migrate FFI to uncurried functions (#44, #46 by @JordanMartinez)
 - Updated recommended module alias in docs (#46 by @JordanMartinez)
 
 ## [v9.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v9.0.0) - 2022-04-29
