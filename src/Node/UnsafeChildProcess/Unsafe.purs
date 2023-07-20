@@ -7,7 +7,7 @@
 -- | are unsafe because their options (or default ones if not specified)
 -- | can affect whether the `unsafe*` values/methods exist.
 -- |
--- | All type aliases for options (e.g. `ExecSyncOptions`) are well-typed.
+-- | All type aliases for options (e.g. `JsExecSyncOptions`) are well-typed.
 module Node.UnsafeChildProcess.Unsafe
   ( unsafeSOBToString
   , unsafeSOBToBuffer
@@ -15,33 +15,33 @@ module Node.UnsafeChildProcess.Unsafe
   , unsafeStdout
   , unsafeStderr
   , execSync
-  , ExecSyncOptions
+  , JsExecSyncOptions
   , execSyncOpts
   , exec
-  , ExecOptions
+  , JsExecOptions
   , execOpts
   , execCb
   , execOptsCb
   , execFileSync
-  , ExecFileSyncOptions
+  , JsExecFileSyncOptions
   , execFileSync'
   , execFile
-  , ExecFileOptions
+  , JsExecFileOptions
   , execFileOpts
   , execFileCb
   , execFileOptsCb
-  , SpawnSyncResult
+  , JsSpawnSyncResult
   , spawnSync
-  , SpawnSyncOptions
+  , JsSpawnSyncOptions
   , spawnSync'
   , spawn
-  , SpawnOptions
+  , JsSpawnOptions
   , spawn'
   , fork
-  , ForkOptions
+  , JsForkOptions
   , fork'
   , unsafeSend
-  , SendOptions
+  , JsSendOptions
   , unsafeSendOpts
   , unsafeSendCb
   , unsafeSendOptsCb
@@ -101,7 +101,7 @@ foreign import execSyncImpl :: EffectFn1 (String) (StringOrBuffer)
 -- | - `maxBuffer` <number> Largest amount of data in bytes allowed on stdout or stderr. If exceeded, the child process is terminated and any output is truncated. See caveat at maxBuffer and Unicode. Default: 1024 * 1024.
 -- | - `encoding` <string> The encoding used for all stdio inputs and outputs. Default: 'buffer'.
 -- | - `windowsHide` <boolean> Hide the subprocess console window that would normally be created on Windows systems. Default: false.
-type ExecSyncOptions =
+type JsExecSyncOptions =
   ( cwd :: String
   , input :: Buffer
   , stdio :: Array StdIO
@@ -118,7 +118,7 @@ type ExecSyncOptions =
 
 execSyncOpts
   :: forall r trash
-   . Row.Union r trash ExecSyncOptions
+   . Row.Union r trash JsExecSyncOptions
   => String
   -> { | r }
   -> Effect StringOrBuffer
@@ -141,7 +141,7 @@ foreign import execImpl :: EffectFn1 (String) (UnsafeChildProcess)
 -- | - `gid` <number> Sets the group identity of the process (see setgid(2)).
 -- | - `windowsHide` <boolean> Hide the subprocess console window that would normally be created on Windows systems. Default: false.
 -- | - `shell` <boolean> | <string> If true, runs command inside of a shell. Uses '/bin/sh' on Unix, and process.env.ComSpec on Windows. A different shell can be specified as a string. See Shell requirements and Default Windows shell. Default: false (no shell).
-type ExecOptions =
+type JsExecOptions =
   ( cwd :: String
   , env :: Object String
   , encoding :: String
@@ -156,7 +156,7 @@ type ExecOptions =
 
 execOpts
   :: forall r trash
-   . Row.Union r trash ExecOptions
+   . Row.Union r trash JsExecOptions
   => String
   -> { | r }
   -> Effect UnsafeChildProcess
@@ -171,7 +171,7 @@ foreign import execCbImpl :: EffectFn2 (String) (EffectFn3 SystemError StringOrB
 
 execOptsCb
   :: forall r trash
-   . Row.Union r trash ExecOptions
+   . Row.Union r trash JsExecOptions
   => String
   -> { | r }
   -> (SystemError -> StringOrBuffer -> StringOrBuffer -> Effect Unit)
@@ -197,7 +197,7 @@ foreign import execFileSyncImpl :: EffectFn2 (String) (Array String) (StringOrBu
 -- | - `encoding` <string> The encoding used for all stdio inputs and outputs. Default: 'buffer'.
 -- | - `windowsHide` <boolean> Hide the subprocess console window that would normally be created on Windows systems. Default: false.
 -- | - `shell` <boolean> | <string> If true, runs command inside of a shell. Uses '/bin/sh' on Unix, and process.env.ComSpec on Windows. A different shell can be specified as a string. See Shell requirements and Default Windows shell. Default: false (no shell).
-type ExecFileSyncOptions =
+type JsExecFileSyncOptions =
   ( cwd :: String
   , input :: Buffer
   , stdio :: Array StdIO
@@ -214,7 +214,7 @@ type ExecFileSyncOptions =
 
 execFileSync'
   :: forall r trash
-   . Row.Union r trash ExecFileSyncOptions
+   . Row.Union r trash JsExecFileSyncOptions
   => String
   -> Array String
   -> { | r }
@@ -239,7 +239,7 @@ foreign import execFileImpl :: EffectFn2 (String) (Array String) (UnsafeChildPro
 -- | - `windowsHide` <boolean> Hide the subprocess console window that would normally be created on Windows systems. Default: false.
 -- | - `windowsVerbatimArguments` <boolean> No quoting or escaping of arguments is done on Windows. Ignored on Unix. Default: false.
 -- | - `shell` <boolean> | <string> If true, runs command inside of a shell. Uses '/bin/sh' on Unix, and process.env.ComSpec on Windows. A different shell can be specified as a string. See Shell requirements and Default Windows shell. Default: false (no shell).
-type ExecFileOptions =
+type JsExecFileOptions =
   ( cwd :: String
   , env :: Object String
   , encoding :: String
@@ -255,7 +255,7 @@ type ExecFileOptions =
 
 execFileOpts
   :: forall r trash
-   . Row.Union r trash ExecFileOptions
+   . Row.Union r trash JsExecFileOptions
   => String
   -> Array String
   -> { | r }
@@ -271,7 +271,7 @@ foreign import execFileCbImpl :: EffectFn3 (String) (Array String) (EffectFn3 Sy
 
 execFileOptsCb
   :: forall r trash
-   . Row.Union r trash ExecFileOptions
+   . Row.Union r trash JsExecFileOptions
   => String
   -> Array String
   -> { | r }
@@ -281,7 +281,7 @@ execFileOptsCb file args opts cb = runEffectFn4 execFileOptsCbImpl file args opt
 
 foreign import execFileOptsCbImpl :: forall r. EffectFn4 (String) (Array String) ({ | r }) (EffectFn3 SystemError StringOrBuffer StringOrBuffer Unit) (UnsafeChildProcess)
 
-type SpawnSyncResult =
+type JsSpawnSyncResult =
   { pid :: Pid
   , output :: Array Foreign
   , stdout :: StringOrBuffer
@@ -291,10 +291,10 @@ type SpawnSyncResult =
   , error :: SystemError
   }
 
-spawnSync :: String -> Array String -> Effect SpawnSyncResult
+spawnSync :: String -> Array String -> Effect JsSpawnSyncResult
 spawnSync command args = runEffectFn2 spawnSyncImpl command args
 
-foreign import spawnSyncImpl :: EffectFn2 (String) (Array String) (SpawnSyncResult)
+foreign import spawnSyncImpl :: EffectFn2 (String) (Array String) (JsSpawnSyncResult)
 
 -- | - `cwd` <string> | <URL> Current working directory of the child process.
 -- | - `input` <string> | <Buffer> | <TypedArray> | <DataView> The value which will be passed as stdin to the spawned process. Supplying this value will override stdio[0].
@@ -310,7 +310,7 @@ foreign import spawnSyncImpl :: EffectFn2 (String) (Array String) (SpawnSyncResu
 -- | - `shell` <boolean> | <string> If true, runs command inside of a shell. Uses '/bin/sh' on Unix, and process.env.ComSpec on Windows. A different shell can be specified as a string. See Shell requirements and Default Windows shell. Default: false (no shell).
 -- | - `windowsVerbatimArguments` <boolean> No quoting or escaping of arguments is done on Windows. Ignored on Unix. This is set to true automatically when shell is specified and is CMD. Default: false.
 -- | - `windowsHide` <boolean> Hide the subprocess console window that would normally be created on Windows systems. Default: false.
-type SpawnSyncOptions =
+type JsSpawnSyncOptions =
   ( cwd :: String
   , input :: Buffer
   , argv0 :: String
@@ -329,14 +329,14 @@ type SpawnSyncOptions =
 
 spawnSync'
   :: forall r trash
-   . Row.Union r trash SpawnSyncOptions
+   . Row.Union r trash JsSpawnSyncOptions
   => String
   -> Array String
   -> { | r }
-  -> Effect SpawnSyncResult
+  -> Effect JsSpawnSyncResult
 spawnSync' command args opts = runEffectFn3 spawnSyncOptsImpl command args opts
 
-foreign import spawnSyncOptsImpl :: forall r. EffectFn3 (String) (Array String) ({ | r }) (SpawnSyncResult)
+foreign import spawnSyncOptsImpl :: forall r. EffectFn3 (String) (Array String) ({ | r }) (JsSpawnSyncResult)
 
 spawn :: String -> Array String -> Effect UnsafeChildProcess
 spawn command args = runEffectFn2 spawnImpl command args
@@ -357,7 +357,7 @@ foreign import spawnImpl :: EffectFn2 (String) (Array String) (UnsafeChildProces
 -- | - `signal` <AbortSignal> allows aborting the child process using an AbortSignal.
 -- | - `timeout` <number> In milliseconds the maximum amount of time the process is allowed to run. Default: undefined.
 -- | - `killSignal` <string> | <integer> The signal value to be used when the spawned process will be killed by timeout or abort signal. Default: 'SIGTERM'.
-type SpawnOptions =
+type JsSpawnOptions =
   ( cwd :: String
   , env :: Object String
   , argv0 :: String
@@ -375,7 +375,7 @@ type SpawnOptions =
 
 spawn'
   :: forall r trash
-   . Row.Union r trash SpawnOptions
+   . Row.Union r trash JsSpawnOptions
   => String
   -> Array String
   -> { | r }
@@ -389,7 +389,7 @@ fork modulePath args = runEffectFn2 forkImpl modulePath args
 
 foreign import forkImpl :: EffectFn2 (String) (Array String) (UnsafeChildProcess)
 
-type ForkOptions =
+type JsForkOptions =
   ( cwd :: String
   , detached :: Boolean
   , env :: Object String
@@ -407,7 +407,7 @@ type ForkOptions =
 
 fork'
   :: forall r trash
-   . Row.Union r trash ForkOptions
+   . Row.Union r trash JsForkOptions
   => String
   -> Array String
   -> { | r }
@@ -422,14 +422,14 @@ unsafeSend msg handle cp = runEffectFn3 sendImpl cp msg handle
 
 foreign import sendImpl :: EffectFn3 (UnsafeChildProcess) (Object Foreign) (Nullable Handle) (Boolean)
 
-type SendOptions =
+type JsSendOptions =
   ( keepAlive :: Boolean
   )
 
 -- | Unsafe because child process must be a Node child process and an IPC channel must exist.
 unsafeSendOpts
   :: forall r trash
-   . Row.Union r trash SendOptions
+   . Row.Union r trash JsSendOptions
   => Object Foreign
   -> Nullable Handle
   -> { | r }
@@ -448,7 +448,7 @@ foreign import sendCbImpl :: EffectFn4 (UnsafeChildProcess) (Object Foreign) (Nu
 -- | Unsafe because child process must be a Node child process and an IPC channel must exist.
 unsafeSendOptsCb
   :: forall r trash
-   . Row.Union r trash SendOptions
+   . Row.Union r trash JsSendOptions
   => Object Foreign
   -> Nullable Handle
   -> { | r }
