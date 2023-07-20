@@ -64,8 +64,8 @@ nonExistentExecutable done = do
 execLs :: Effect Unit
 execLs = do
   -- returned ChildProcess is ignored here
-  _ <- exec' "ls >&2" identity \_ _ stderr' ->
-    log "redirected to stderr:" *> (Buffer.toString UTF8 stderr' >>= log)
+  _ <- exec' "ls >&2" identity \r ->
+    log "redirected to stderr:" *> (Buffer.toString UTF8 r.stderr >>= log)
   pure unit
 
 execSyncEcho :: String -> Effect Unit
