@@ -16,7 +16,7 @@ module Node.UnsafeChildProcess.Unsafe
   , unsafeStderr
   , execSync
   , JsExecSyncOptions
-  , execSyncOpts
+  , execSync'
   , exec
   , JsExecOptions
   , execOpts
@@ -116,13 +116,13 @@ type JsExecSyncOptions =
   , windowsHide :: Boolean
   )
 
-execSyncOpts
+execSync'
   :: forall r trash
    . Row.Union r trash JsExecSyncOptions
   => String
   -> { | r }
   -> Effect StringOrBuffer
-execSyncOpts command opts = runEffectFn2 execSyncOptsImpl command opts
+execSync' command opts = runEffectFn2 execSyncOptsImpl command opts
 
 foreign import execSyncOptsImpl :: forall r. EffectFn2 (String) ({ | r }) (StringOrBuffer)
 
