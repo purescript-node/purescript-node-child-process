@@ -46,50 +46,6 @@ export function fork(cmd) {
   return args => () => cp_fork(cmd, args);
 }
 
-export function mkOnExit(mkChildExit) {
-  return function onExit(cp) {
-    return cb => () => {
-      cp.on("exit", (code, signal) => {
-        cb(mkChildExit(code)(signal))();
-      });
-    };
-  };
-}
-
-export function mkOnClose(mkChildExit) {
-  return function onClose(cp) {
-    return cb => () => {
-      cp.on("close", (code, signal) => {
-        cb(mkChildExit(code)(signal))();
-      });
-    };
-  };
-}
-
-export function onDisconnect(cp) {
-  return cb => () => {
-    cp.on("disconnect", cb);
-  };
-}
-
-export function mkOnMessage(nothing) {
-  return just => (function onMessage(cp) {
-    return cb => () => {
-      cp.on("message", (mess, sendHandle) => {
-        cb(mess, sendHandle ? just(sendHandle) : nothing)();
-      });
-    };
-  });
-}
-
-export function onError(cp) {
-  return cb => () => {
-    cp.on("error", err => {
-      cb(err)();
-    });
-  };
-}
-
 const _undefined = undefined;
 export { _undefined as undefined };
 import process from "process";

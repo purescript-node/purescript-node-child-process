@@ -7,10 +7,11 @@ import Data.Posix.Signal (Signal(..))
 import Effect (Effect)
 import Effect.Console (log)
 import Node.Buffer as Buffer
-import Node.ChildProcess (Exit(..), defaultExecOptions, exec, defaultExecSyncOptions, execSync, onError, defaultSpawnOptions, spawn, stdout, onExit, kill)
+import Node.ChildProcess (Exit(..), defaultExecOptions, defaultExecSyncOptions, defaultSpawnOptions, errorH, exec, execSync, exitH, kill, spawn, stdout)
 import Node.Encoding (Encoding(UTF8))
 import Node.Encoding as NE
-import Node.Stream (onData)
+import Node.EventEmitter (on_)
+import Node.Stream (dataH)
 
 main :: Effect Unit
 main = do
@@ -24,7 +25,7 @@ main = do
   log "doesn't perform effects too early"
   spawn "ls" [ "-la" ] defaultSpawnOptions >>= \ls -> do
     let _ = kill SIGTERM ls
-    onExit ls \exit ->
+    ls # on_ exitH \exit ->
       case exit of
         Normally 0 ->
           log "All good!"
@@ -34,7 +35,7 @@ main = do
   log "kills processes"
   spawn "ls" [ "-la" ] defaultSpawnOptions >>= \ls -> do
     _ <- kill SIGTERM ls
-    onExit ls \exit ->
+    ls # on_ exitH \exit ->
       case exit of
         BySignal SIGTERM ->
           log "All good!"
@@ -47,14 +48,15 @@ main = do
 spawnLs :: Effect Unit
 spawnLs = do
   ls <- spawn "ls" [ "-la" ] defaultSpawnOptions
-  onExit ls \exit ->
+  ls # on_ exitH \exit ->
     log $ "ls exited: " <> show exit
-  onData (stdout ls) (Buffer.toString UTF8 >=> log)
+  (stdout ls) # on_ dataH (Buffer.toString UTF8 >=> log)
 
 nonExistentExecutable :: Effect Unit -> Effect Unit
 nonExistentExecutable done = do
   ch <- spawn "this-does-not-exist" [] defaultSpawnOptions
-  onError ch (\err -> log err.code *> done)
+  ch # on_ errorH \err ->
+    log err.code *> done
 
 execLs :: Effect Unit
 execLs = do

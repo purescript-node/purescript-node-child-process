@@ -5,8 +5,24 @@ Notable changes to this project are documented in this file. The format is based
 ## [Unreleased]
 
 Breaking changes:
+- Migrate `onEvent`-style event handlers to `eventH`-style (#43 by @JordanMartinez)
+
+  ```purs
+  -- Before
+  onExit cp case _ of
+    Normally exitCode -> ...
+    BySignal signal -> ...
+
+  -- After
+  cp # on_ exitH case _ of
+    Normally exitCode -> ...
+    BySignal signal -> ...
+  ```
+  See https://pursuit.purescript.org/packages/purescript-node-event-emitter/3.0.0/docs/Node.EventEmitter for more details.
+
 
 New features:
+- Added event handler for `spawn` event (#43 by @JordanMartinez)
 
 Bugfixes:
 

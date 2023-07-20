@@ -14,6 +14,13 @@
 module Node.ChildProcess
   ( Handle
   , ChildProcess
+  , toEventEmitter
+  , closeH
+  , disconnectH
+  , errorH
+  , exitH
+  , messageH
+  , spawnH
   , stdin
   , stdout
   , stderr
@@ -25,11 +32,6 @@ module Node.ChildProcess
   , Error
   , toStandardError
   , Exit(..)
-  , onExit
-  , onClose
-  , onDisconnect
-  , onMessage
-  , onError
   , spawn
   , SpawnOptions
   , defaultSpawnOptions
@@ -51,22 +53,24 @@ module Node.ChildProcess
 
 import Prelude
 
-import Control.Alt ((<|>))
 import Data.Function.Uncurried (Fn2, runFn2)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
-import Data.Nullable (Nullable, toNullable, toMaybe)
+import Data.Nullable (Nullable, toMaybe, toNullable)
 import Data.Posix (Pid, Gid, Uid)
 import Data.Posix.Signal (Signal)
 import Data.Posix.Signal as Signal
 import Effect (Effect)
 import Effect.Exception as Exception
-import Effect.Exception.Unsafe (unsafeThrow)
+import Effect.Uncurried (EffectFn2, mkEffectFn1, mkEffectFn2)
 import Foreign (Foreign)
 import Foreign.Object (Object)
 import Node.Buffer (Buffer)
 import Node.Encoding (Encoding, encodingToNode)
+import Node.EventEmitter (EventEmitter, EventHandle(..))
+import Node.EventEmitter.UtilTypes (EventHandle0, EventHandle1)
 import Node.FS as FS
-import Node.Stream (Readable, Writable, Stream)
+import Node.Stream (Readable, Stream, Writable)
+import Partial.Unsafe (unsafeCrashWith)
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | A handle for inter-process communication (IPC).
@@ -74,7 +78,38 @@ foreign import data Handle :: Type
 
 -- | Opaque type returned by `spawn`, `fork` and `exec`.
 -- | Needed as input for most methods in this module.
+-- |
+-- | `ChildProcess` extends `EventEmitter`
 newtype ChildProcess = ChildProcess ChildProcessRec
+
+toEventEmitter :: ChildProcess -> EventEmitter
+toEventEmitter = unsafeCoerce
+
+closeH :: EventHandle ChildProcess (Exit -> Effect Unit) (EffectFn2 (Nullable Int) (Nullable String) Unit)
+closeH = EventHandle "close" \cb -> mkEffectFn2 \code signal ->
+  case toMaybe code, toMaybe signal >>= Signal.fromString of
+    Just c, _ -> cb $ Normally c
+    _, Just s -> cb $ BySignal s
+    _, _ -> unsafeCrashWith $ "Impossible. 'close' event did not get an exit code or kill signal: " <> show code <> "; " <> show signal
+
+disconnectH :: EventHandle0 ChildProcess
+disconnectH = EventHandle "disconnect" identity
+
+errorH :: EventHandle1 ChildProcess Error
+errorH = EventHandle "error" mkEffectFn1
+
+exitH :: EventHandle ChildProcess (Exit -> Effect Unit) (EffectFn2 (Nullable Int) (Nullable String) Unit)
+exitH = EventHandle "exitH" \cb -> mkEffectFn2 \code signal ->
+  case toMaybe code, toMaybe signal >>= Signal.fromString of
+    Just c, _ -> cb $ Normally c
+    _, Just s -> cb $ BySignal s
+    _, _ -> unsafeCrashWith $ "Impossible. 'exit' event did not get an exit code or kill signal: " <> show code <> "; " <> show signal
+
+messageH :: EventHandle ChildProcess (Foreign -> Maybe Handle -> Effect Unit) (EffectFn2 Foreign (Nullable Handle) Unit)
+messageH = EventHandle "message" \cb -> mkEffectFn2 \a b -> cb a $ toMaybe b
+
+spawnH :: EventHandle0 ChildProcess
+spawnH = EventHandle "spawn" identity
 
 runChildProcess :: ChildProcess -> ChildProcessRec
 runChildProcess (ChildProcess r) = r
@@ -164,68 +199,6 @@ data Exit
 instance showExit :: Show Exit where
   show (Normally x) = "Normally " <> show x
   show (BySignal sig) = "BySignal " <> show sig
-
-mkExit :: Nullable Int -> Nullable String -> Exit
-mkExit code signal =
-  case fromCode code <|> fromSignal signal of
-    Just e -> e
-    Nothing -> unsafeThrow "Node.ChildProcess.mkExit: Invalid arguments"
-  where
-  fromCode = toMaybe >>> map Normally
-  fromSignal = toMaybe >=> Signal.fromString >>> map BySignal
-
--- | Handle the `"exit"` signal.
-onExit
-  :: ChildProcess
-  -> (Exit -> Effect Unit)
-  -> Effect Unit
-onExit = mkOnExit mkExit
-
-foreign import mkOnExit
-  :: (Nullable Int -> Nullable String -> Exit)
-  -> ChildProcess
-  -> (Exit -> Effect Unit)
-  -> Effect Unit
-
--- | Handle the `"close"` signal.
-onClose
-  :: ChildProcess
-  -> (Exit -> Effect Unit)
-  -> Effect Unit
-onClose = mkOnClose mkExit
-
-foreign import mkOnClose
-  :: (Nullable Int -> Nullable String -> Exit)
-  -> ChildProcess
-  -> (Exit -> Effect Unit)
-  -> Effect Unit
-
--- | Handle the `"message"` signal.
-onMessage
-  :: ChildProcess
-  -> (Foreign -> Maybe Handle -> Effect Unit)
-  -> Effect Unit
-onMessage = mkOnMessage Nothing Just
-
-foreign import mkOnMessage
-  :: forall a
-   . Maybe a
-  -> (a -> Maybe a)
-  -> ChildProcess
-  -> (Foreign -> Maybe Handle -> Effect Unit)
-  -> Effect Unit
-
--- | Handle the `"disconnect"` signal.
-foreign import onDisconnect
-  :: ChildProcess
-  -> Effect Unit
-  -> Effect Unit
-
--- | Handle the `"error"` signal.
-foreign import onError
-  :: ChildProcess
-  -> (Error -> Effect Unit)
-  -> Effect Unit
 
 -- | Spawn a child process. Note that, in the event that a child process could
 -- | not be spawned (for example, if the executable was not found) this will
