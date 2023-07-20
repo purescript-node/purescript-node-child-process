@@ -4,7 +4,6 @@ import Prelude
 
 import Data.Nullable (Nullable, null)
 import Data.Posix.Signal (Signal)
-import Node.EventEmitter (EventEmitter)
 import Node.FS (FileDescriptor)
 import Node.Stream (Stream)
 import Unsafe.Coerce (unsafeCoerce)
@@ -14,9 +13,6 @@ import Unsafe.Coerce (unsafeCoerce)
 -- | options or which function used to start the child process
 -- | (e.g. `stdio`, `fork`) exist.
 foreign import data UnsafeChildProcess :: Type
-
-toEventEmitter :: UnsafeChildProcess -> EventEmitter
-toEventEmitter = unsafeCoerce
 
 -- | A handle for inter-process communication (IPC).
 foreign import data Handle :: Type

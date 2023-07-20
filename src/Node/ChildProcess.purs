@@ -32,6 +32,8 @@ module Node.ChildProcess
   , killSignal
   , killed
   , signalCode
+  , spawnFile
+  , spawnArgs
   , send
   , spawn
   , SpawnOptions
@@ -59,21 +61,20 @@ import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Nullable (Nullable, toMaybe, toNullable)
 import Data.Posix (Pid, Gid, Uid)
 import Data.Posix.Signal (Signal)
-import Data.Posix.Signal as Signal
 import Effect (Effect)
 import Effect.Exception as Exception
-import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, mkEffectFn2, runEffectFn1, runEffectFn2)
+import Effect.Uncurried (EffectFn2)
 import Foreign (Foreign)
 import Foreign.Object (Object)
 import Node.Buffer (Buffer)
-import Node.ChildProcess.Types (Exit(..), Handle)
+import Node.ChildProcess.Types (Exit, Handle, UnsafeChildProcess)
 import Node.Encoding (Encoding, encodingToNode)
 import Node.Errors.SystemError (SystemError)
-import Node.EventEmitter (EventEmitter, EventHandle(..))
+import Node.EventEmitter (EventEmitter, EventHandle)
 import Node.EventEmitter.UtilTypes (EventHandle0, EventHandle1)
 import Node.FS as FS
 import Node.Stream (Readable, Stream, Writable)
-import Partial.Unsafe (unsafeCrashWith)
+import Node.UnsafeChildProcess.Safe as SafeCP
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | Opaque type returned by `spawn`, `fork` and `exec`.
@@ -83,33 +84,28 @@ import Unsafe.Coerce (unsafeCoerce)
 newtype ChildProcess = ChildProcess ChildProcessRec
 
 toEventEmitter :: ChildProcess -> EventEmitter
-toEventEmitter = unsafeCoerce
+toEventEmitter = toUnsafeChildProcess >>> SafeCP.toEventEmitter
+
+toUnsafeChildProcess :: ChildProcess -> UnsafeChildProcess
+toUnsafeChildProcess = unsafeCoerce
 
 closeH :: EventHandle ChildProcess (Exit -> Effect Unit) (EffectFn2 (Nullable Int) (Nullable String) Unit)
-closeH = EventHandle "close" \cb -> mkEffectFn2 \code signal ->
-  case toMaybe code, toMaybe signal >>= Signal.fromString of
-    Just c, _ -> cb $ Normally c
-    _, Just s -> cb $ BySignal s
-    _, _ -> unsafeCrashWith $ "Impossible. 'close' event did not get an exit code or kill signal: " <> show code <> "; " <> show signal
+closeH = unsafeCoerce SafeCP.closeH
 
 disconnectH :: EventHandle0 ChildProcess
-disconnectH = EventHandle "disconnect" identity
+disconnectH = unsafeCoerce SafeCP.disconnectH
 
 errorH :: EventHandle1 ChildProcess SystemError
-errorH = EventHandle "error" mkEffectFn1
+errorH = unsafeCoerce SafeCP.errorH
 
 exitH :: EventHandle ChildProcess (Exit -> Effect Unit) (EffectFn2 (Nullable Int) (Nullable String) Unit)
-exitH = EventHandle "exitH" \cb -> mkEffectFn2 \code signal ->
-  case toMaybe code, toMaybe signal >>= Signal.fromString of
-    Just c, _ -> cb $ Normally c
-    _, Just s -> cb $ BySignal s
-    _, _ -> unsafeCrashWith $ "Impossible. 'exit' event did not get an exit code or kill signal: " <> show code <> "; " <> show signal
+exitH = unsafeCoerce SafeCP.exitH
 
 messageH :: EventHandle ChildProcess (Foreign -> Maybe Handle -> Effect Unit) (EffectFn2 Foreign (Nullable Handle) Unit)
-messageH = EventHandle "message" \cb -> mkEffectFn2 \a b -> cb a $ toMaybe b
+messageH = unsafeCoerce SafeCP.messageH
 
 spawnH :: EventHandle0 ChildProcess
-spawnH = EventHandle "spawn" identity
+spawnH = unsafeCoerce SafeCP.spawnH
 
 runChildProcess :: ChildProcess -> ChildProcessRec
 runChildProcess (ChildProcess r) = r
@@ -120,11 +116,7 @@ type ChildProcessRec =
   { stdin :: Nullable (Writable ())
   , stdout :: Nullable (Readable ())
   , stderr :: Nullable (Readable ())
-  , pid :: Pid
-  , connected :: Boolean
-  , kill :: String -> Unit
   , send :: forall r. Fn2 { | r } Handle Boolean
-  , disconnect :: Effect Unit
   }
 
 -- | The standard input stream of a child process. Note that this is only
@@ -153,21 +145,15 @@ foreign import unsafeFromNullable :: forall a. String -> Nullable a -> a
 -- | The process ID of a child process. Note that if the process has already
 -- | exited, another process may have taken the same ID, so be careful!
 pid :: ChildProcess -> Effect (Maybe Pid)
-pid cp = map toMaybe $ runEffectFn1 pidImpl cp
-
-foreign import pidImpl :: EffectFn1 (ChildProcess) (Nullable Pid)
+pid = unsafeCoerce SafeCP.pid
 
 -- | Indicates whether it is still possible to send and receive
 -- | messages from the child process.
 connected :: ChildProcess -> Effect Boolean
-connected cp = runEffectFn1 connectedImpl cp
-
-foreign import connectedImpl :: EffectFn1 (ChildProcess) (Boolean)
+connected = unsafeCoerce SafeCP.connected
 
 exitCode :: ChildProcess -> Effect (Maybe Int)
-exitCode cp = map toMaybe $ runEffectFn1 exitCodeImpl cp
-
-foreign import exitCodeImpl :: EffectFn1 (ChildProcess) (Nullable Int)
+exitCode = unsafeCoerce SafeCP.exitCode
 
 -- | Send messages to the (`nodejs`) child process.
 -- |
@@ -183,19 +169,13 @@ send msg handle (ChildProcess cp) = mkEffect \_ -> runFn2 cp.send msg handle
 
 -- | Closes the IPC channel between parent and child.
 disconnect :: ChildProcess -> Effect Unit
-disconnect cp = runEffectFn1 disconnectImpl cp
-
-foreign import disconnectImpl :: EffectFn1 (ChildProcess) (Unit)
+disconnect = unsafeCoerce SafeCP.disconnect
 
 kill :: ChildProcess -> Effect Boolean
-kill cp = runEffectFn1 killImpl cp
-
-foreign import killImpl :: EffectFn1 (ChildProcess) (Boolean)
+kill = unsafeCoerce SafeCP.kill
 
 kill' :: String -> ChildProcess -> Effect Boolean
-kill' sig cp = runEffectFn2 killStrImpl cp sig
-
-foreign import killStrImpl :: EffectFn2 (ChildProcess) (String) (Boolean)
+kill' = unsafeCoerce SafeCP.kill'
 
 -- | Send a signal to a child process. In the same way as the
 -- | [unix kill(2) system call](https://linux.die.net/man/2/kill),
@@ -206,21 +186,19 @@ foreign import killStrImpl :: EffectFn2 (ChildProcess) (String) (Boolean)
 -- | The child process might emit an `"error"` event if the signal
 -- | could not be delivered.
 killSignal :: Signal -> ChildProcess -> Effect Boolean
-killSignal sig cp = kill' (Signal.toString sig) cp
+killSignal = unsafeCoerce SafeCP.killSignal
 
 killed :: ChildProcess -> Effect Boolean
-killed cp = runEffectFn1 killedImpl cp
+killed = unsafeCoerce SafeCP.killed
 
 signalCode :: ChildProcess -> Effect (Maybe String)
-signalCode cp = map toMaybe $ runEffectFn1 signalCodeImpl cp
+signalCode = unsafeCoerce SafeCP.signalCode
 
-foreign import signalCodeImpl :: EffectFn1 (ChildProcess) (Nullable String)
+spawnArgs :: ChildProcess -> Array String
+spawnArgs = unsafeCoerce SafeCP.spawnArgs
 
-foreign import killedImpl :: EffectFn1 (ChildProcess) (Boolean)
-
-foreign import spawnArgs :: ChildProcess -> Array String
-
-foreign import spawnFile :: ChildProcess -> String
+spawnFile :: ChildProcess -> String
+spawnFile = unsafeCoerce SafeCP.spawnFile
 
 mkEffect :: forall a. (Unit -> a) -> Effect a
 mkEffect = unsafeCoerce
