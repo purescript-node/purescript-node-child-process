@@ -15,6 +15,7 @@ jobs:
       - uses: purescript-contrib/setup-purescript@main
         with:
           purescript: "unstable"
+          purs-tidy: "latest"
 
       - uses: actions/setup-node@v3
         with:
