@@ -11,6 +11,8 @@ New features:
 Bugfixes:
 
 Other improvements:
+- Bumped CI's node version to `lts/*` (#41 by @JordanMartinez)
+- Updated CI `actions/checkout` and `actions/setup-nodee` to `v3` (#41 by @JordanMartinez)
 
 ## [v9.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v9.0.0) - 2022-04-29
 
