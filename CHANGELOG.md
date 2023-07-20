@@ -22,6 +22,7 @@ Breaking changes:
 
 
 New features:
+- Added event handler for `spawn` event (#43 by @JordanMartinez)
 
 Bugfixes:
 
