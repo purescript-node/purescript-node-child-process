@@ -61,6 +61,9 @@ New features:
   - spawnFile
 - Added unsafe, uncurried API of all ChildProcess-creating functions (#46 by @JordanMartinez)
 - Added safe variant of `spawnSync`/`spawnSync'` (#46 by @JordanMartinez)
+- Added `Aff`-based `waitSpawned` to safely get `Pid` (#47 by @JordanMartinez)
+
+  Blocks until child process either successfully spawns or fails to spawn.
 
 Bugfixes:
 
