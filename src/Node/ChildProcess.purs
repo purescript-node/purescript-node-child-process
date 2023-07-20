@@ -138,22 +138,20 @@ spawnH = unsafeCoerce SafeCP.spawnH
 unsafeFromNull :: forall a. Nullable a -> a
 unsafeFromNull = unsafeCoerce
 
--- | The standard input stream of a child process. Note that this is only
--- | available if the process was spawned with the stdin option set to "pipe".
+-- | The standard input stream of a child process.
 stdin :: ChildProcess -> Writable ()
 stdin = toUnsafeChildProcess >>> UnsafeCP.unsafeStdin >>> unsafeFromNull
 
--- | The standard output stream of a child process. Note that this is only
--- | available if the process was spawned with the stdout option set to "pipe".
+-- | The standard output stream of a child process.
 stdout :: ChildProcess -> Readable ()
 stdout = toUnsafeChildProcess >>> UnsafeCP.unsafeStdout >>> unsafeFromNull
 
--- | The standard error stream of a child process. Note that this is only
--- | available if the process was spawned with the stderr option set to "pipe".
+-- | The standard error stream of a child process.
 stderr :: ChildProcess -> Readable ()
 stderr = toUnsafeChildProcess >>> UnsafeCP.unsafeStderr >>> unsafeFromNull
 
--- | The process ID of a child process. Note that if the process has already
+-- | The process ID of a child process. This will be `Nothing` until
+-- | the process has spawned. Note that if the process has already
 -- | exited, another process may have taken the same ID, so be careful!
 pid :: ChildProcess -> Effect (Maybe Pid)
 pid = unsafeCoerce SafeCP.pid
@@ -384,7 +382,7 @@ spawn' cmd args buildOpts = coerce $ UnsafeCP.spawn' cmd args opts
 
 -- | Generally identical to `exec`, with the exception that
 -- | the method will not return until the child process has fully closed.
--- | Returns: The stdout from the command.
+-- | Returns: The `stdout` from the command.
 execSync
   :: String
   -> Effect Buffer
@@ -453,8 +451,7 @@ execSync' cmd buildOpts = do
 
 -- | Similar to `spawn`, except that this variant will:
 -- | * run the given command with the shell,
--- | * buffer output, and wait until the process has exited before calling the
--- |   callback.
+-- | * buffer output, and wait until the process has exited.
 -- |
 -- | Note that the child process will be killed if the amount of output exceeds
 -- | a certain threshold (the default is defined by Node.js).
@@ -489,6 +486,13 @@ type ExecOptions =
   , shell :: Maybe Shell
   }
 
+-- | Similar to `spawn`, except that this variant will:
+-- | * run the given command with the shell,
+-- | * buffer output, and wait until the process has exited before calling the
+-- |   callback.
+-- |
+-- | Note that the child process will be killed if the amount of output exceeds
+-- | a certain threshold (the default is defined by Node.js).
 exec'
   :: String
   -> (ExecOptions -> ExecOptions)
@@ -523,7 +527,7 @@ exec' command buildOpts cb = coerce $ UnsafeCP.execOptsCb command opts \err sout
 
 -- | Generally identical to `execFile`, with the exception that
 -- | the method will not return until the child process has fully closed.
--- | Returns: The stdout from the command.
+-- | Returns: The `stdout` from the command.
 execFileSync
   :: String
   -> Array String
