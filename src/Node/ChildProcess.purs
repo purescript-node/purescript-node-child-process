@@ -338,7 +338,7 @@ type SpawnOptions =
   , shell :: Maybe Shell
   , windowsVerbatimArguments :: Maybe Boolean
   , windowsHide :: Maybe Boolean
-  , timeout :: Maybe Number
+  , timeout :: Maybe Milliseconds
   , killSignal :: Maybe KillSignal
   }
 
@@ -477,7 +477,7 @@ type ExecResult =
 type ExecOptions =
   { cwd :: Maybe String
   , env :: Maybe (Object String)
-  , timeout :: Maybe Number
+  , timeout :: Maybe Milliseconds
   , maxBuffer :: Maybe Number
   , killSignal :: Maybe KillSignal
   , uid :: Maybe Uid
@@ -616,7 +616,7 @@ execFile cmd args = coerce $ UnsafeCP.execFileOpts cmd args { encoding: "buffer"
 type ExecFileOptions =
   { cwd :: Maybe String
   , env :: Maybe (Object String)
-  , timeout :: Maybe Number
+  , timeout :: Maybe Milliseconds
   , maxBuffer :: Maybe Number
   , killSignal :: Maybe KillSignal
   , uid :: Maybe Uid
