@@ -155,18 +155,6 @@ connected = unsafeCoerce SafeCP.connected
 exitCode :: ChildProcess -> Effect (Maybe Int)
 exitCode = unsafeCoerce SafeCP.exitCode
 
--- | Send messages to the (`nodejs`) child process.
--- |
--- | See the [node documentation](https://nodejs.org/api/child_process.html#child_process_subprocess_send_message_sendhandle_options_callback)
--- | for in-depth documentation.
-send
-  :: forall props
-   . { | props }
-  -> Handle
-  -> ChildProcess
-  -> Effect Boolean
-send msg handle (ChildProcess cp) = mkEffect \_ -> runFn2 cp.send msg handle
-
 -- | Closes the IPC channel between parent and child.
 disconnect :: ChildProcess -> Effect Unit
 disconnect = unsafeCoerce SafeCP.disconnect
@@ -190,6 +178,18 @@ killSignal = unsafeCoerce SafeCP.killSignal
 
 killed :: ChildProcess -> Effect Boolean
 killed = unsafeCoerce SafeCP.killed
+
+-- | Send messages to the (`nodejs`) child process.
+-- |
+-- | See the [node documentation](https://nodejs.org/api/child_process.html#child_process_subprocess_send_message_sendhandle_options_callback)
+-- | for in-depth documentation.
+send
+  :: forall props
+   . { | props }
+  -> Handle
+  -> ChildProcess
+  -> Effect Boolean
+send msg handle (ChildProcess cp) = mkEffect \_ -> runFn2 cp.send msg handle
 
 signalCode :: ChildProcess -> Effect (Maybe String)
 signalCode = unsafeCoerce SafeCP.signalCode
