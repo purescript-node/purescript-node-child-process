@@ -5,6 +5,16 @@ Notable changes to this project are documented in this file. The format is based
 ## [Unreleased]
 
 Breaking changes:
+
+New features:
+
+Bugfixes:
+
+Other improvements:
+
+## [v10.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v10.0.0) - 2023-07-20
+
+Breaking changes:
 - Migrate `onEvent`-style event handlers to `eventH`-style (#43 by @JordanMartinez)
 
   ```purs
