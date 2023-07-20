@@ -22,7 +22,7 @@ main = do
     log "nonexistent executable: all good."
 
   log "doesn't perform effects too early"
-  spawn "ls" ["-la"] defaultSpawnOptions >>= \ls -> do
+  spawn "ls" [ "-la" ] defaultSpawnOptions >>= \ls -> do
     let _ = kill SIGTERM ls
     onExit ls \exit ->
       case exit of
@@ -32,7 +32,7 @@ main = do
           log ("Bad exit: expected `Normally 0`, got: " <> show exit)
 
   log "kills processes"
-  spawn "ls" ["-la"] defaultSpawnOptions >>= \ls -> do
+  spawn "ls" [ "-la" ] defaultSpawnOptions >>= \ls -> do
     _ <- kill SIGTERM ls
     onExit ls \exit ->
       case exit of
@@ -46,9 +46,9 @@ main = do
 
 spawnLs :: Effect Unit
 spawnLs = do
-  ls <- spawn "ls" ["-la"] defaultSpawnOptions
+  ls <- spawn "ls" [ "-la" ] defaultSpawnOptions
   onExit ls \exit ->
-      log $ "ls exited: " <> show exit
+    log $ "ls exited: " <> show exit
   onData (stdout ls) (Buffer.toString UTF8 >=> log)
 
 nonExistentExecutable :: Effect Unit -> Effect Unit
@@ -65,6 +65,6 @@ execLs = do
 
 execSyncEcho :: String -> Effect Unit
 execSyncEcho str = do
-  resBuf <- execSync "cat" (defaultExecSyncOptions {input = Just str})
+  resBuf <- execSync "cat" (defaultExecSyncOptions { input = Just str })
   res <- Buffer.toString NE.UTF8 resBuf
   log res
