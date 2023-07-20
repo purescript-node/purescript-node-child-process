@@ -18,9 +18,9 @@ export {
   fork as forkOptsImpl,
 } from "child_process";
 
-export const stdin = (cp) => cp.stdin;
-export const stdout = (cp) => cp.stdout;
-export const stderr = (cp) => cp.stderr;
+export const unsafeStdin = (cp) => cp.stdin;
+export const unsafeStdout = (cp) => cp.stdout;
+export const unsafeStderr = (cp) => cp.stderr;
 export const unsafeChannelRefImpl = (cp) => cp.channel.ref();
 export const unsafeChannelUnrefImpl = (cp) => cp.channel.unref();
 export const sendImpl = (cp, msg, handle) => cp.send(msg, handle);
