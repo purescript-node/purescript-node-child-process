@@ -34,8 +34,6 @@ module Node.ChildProcess
   , killed
   , signalCode
   , send
-  , Error
-  , toStandardError
   , Exit(..)
   , spawn
   , SpawnOptions
@@ -71,6 +69,7 @@ import Foreign (Foreign)
 import Foreign.Object (Object)
 import Node.Buffer (Buffer)
 import Node.Encoding (Encoding, encodingToNode)
+import Node.Errors.SystemError (SystemError)
 import Node.EventEmitter (EventEmitter, EventHandle(..))
 import Node.EventEmitter.UtilTypes (EventHandle0, EventHandle1)
 import Node.FS as FS
@@ -100,7 +99,7 @@ closeH = EventHandle "close" \cb -> mkEffectFn2 \code signal ->
 disconnectH :: EventHandle0 ChildProcess
 disconnectH = EventHandle "disconnect" identity
 
-errorH :: EventHandle1 ChildProcess Error
+errorH :: EventHandle1 ChildProcess SystemError
 errorH = EventHandle "error" mkEffectFn1
 
 exitH :: EventHandle ChildProcess (Exit -> Effect Unit) (EffectFn2 (Nullable Int) (Nullable String) Unit)
@@ -471,18 +470,6 @@ foreign import fork
   :: String
   -> Array String
   -> Effect ChildProcess
-
--- | An error which occurred inside a child process.
-type Error =
-  { code :: String
-  , errno :: String
-  , syscall :: String
-  }
-
--- | Convert a ChildProcess.Error to a standard Error, which can then be thrown
--- | inside an Effect or Aff computation (for example).
-toStandardError :: Error -> Exception.Error
-toStandardError = unsafeCoerce
 
 -- | Behaviour for standard IO streams (eg, standard input, standard output) of
 -- | a child process.

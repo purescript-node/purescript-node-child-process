@@ -10,6 +10,7 @@ import Node.Buffer as Buffer
 import Node.ChildProcess (Exit(..), defaultExecOptions, defaultExecSyncOptions, defaultSpawnOptions, errorH, exec, execSync, exitH, kill, spawn, stdout)
 import Node.Encoding (Encoding(UTF8))
 import Node.Encoding as NE
+import Node.Errors.SystemError (code)
 import Node.EventEmitter (on_)
 import Node.Stream (dataH)
 
@@ -56,7 +57,7 @@ nonExistentExecutable :: Effect Unit -> Effect Unit
 nonExistentExecutable done = do
   ch <- spawn "this-does-not-exist" [] defaultSpawnOptions
   ch # on_ errorH \err ->
-    log err.code *> done
+    log (code err) *> done
 
 execLs :: Effect Unit
 execLs = do

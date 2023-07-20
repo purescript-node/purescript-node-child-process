@@ -21,6 +21,7 @@ Breaking changes:
   See https://pursuit.purescript.org/packages/purescript-node-event-emitter/3.0.0/docs/Node.EventEmitter for more details.
 - Update `pid` type signature to return `Maybe Pid` rather than `Pid` (#44 by @JordanMartinez)
 - Update `kill` returned value from `Effect Unit` to `Effect Boolean` (#44 by @JordanMartinez)
+- Migrate `Error` to `node-os`' `SystemError` (#45 by @JordanMartinez)
 
 
 New features:
