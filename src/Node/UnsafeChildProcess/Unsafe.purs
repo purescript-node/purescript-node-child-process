@@ -392,6 +392,20 @@ fork modulePath args = runEffectFn2 forkImpl modulePath args
 
 foreign import forkImpl :: EffectFn2 (String) (Array String) (UnsafeChildProcess)
 
+-- | - `cwd` <string> | <URL> Current working directory of the child process.
+-- | - `detached` <boolean> Prepare child to run independently of its parent process. Specific behavior depends on the platform, see options.detached).
+-- | - `env` <Object> Environment key-value pairs. Default: process.env.
+-- | - `execPath` <string> Executable used to create the child process.
+-- | - `execArgv` <string[]> List of string arguments passed to the executable. Default: process.execArgv.
+-- | - `gid` <number> Sets the group identity of the process (see setgid(2)).
+-- | - `serialization` <string> Specify the kind of serialization used for sending messages between processes. Possible values are 'json' and 'advanced'. See Advanced serialization for more details. Default: 'json'.
+-- | - `signal` <AbortSignal> Allows closing the child process using an AbortSignal.
+-- | - `killSignal` <string> | <integer> The signal value to be used when the spawned process will be killed by timeout or abort signal. Default: 'SIGTERM'.
+-- | - `silent` <boolean> If true, stdin, stdout, and stderr of the child will be piped to the parent, otherwise they will be inherited from the parent, see the 'pipe' and 'inherit' options for child_process.spawn()'s stdio for more details. Default: false.
+-- | - `stdio` <Array> | <string> See child_process.spawn()'s stdio. When this option is provided, it overrides silent. If the array variant is used, it must contain exactly one item with value 'ipc' or an error will be thrown. For instance [0, 1, 2, 'ipc'].
+-- | - `uid` <number> Sets the user identity of the process (see setuid(2)).
+-- | - `windowsVerbatimArguments` <boolean> No quoting or escaping of arguments is done on Windows. Ignored on Unix. Default: false.
+-- | - `timeout` <number> In milliseconds the maximum amount of time the process is allowed to run. Default: undefined.
 type JsForkOptions =
   ( cwd :: String
   , detached :: Boolean
@@ -425,6 +439,7 @@ unsafeSend msg handle cp = runEffectFn3 sendImpl cp msg handle
 
 foreign import sendImpl :: forall messageRows. EffectFn3 (UnsafeChildProcess) ({ | messageRows }) (Nullable Handle) (Boolean)
 
+-- | - `keepAlive` <boolean> A value that can be used when passing instances of `net.Socket` as the `Handle`. When true, the socket is kept open in the sending process. Default: false.
 type JsSendOptions =
   ( keepAlive :: Boolean
   )
