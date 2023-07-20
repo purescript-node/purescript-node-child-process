@@ -24,7 +24,7 @@ main = do
 
   log "doesn't perform effects too early"
   spawn "ls" [ "-la" ] defaultSpawnOptions >>= \ls -> do
-    let _ = kill SIGTERM ls
+    let _ = kill ls
     ls # on_ exitH \exit ->
       case exit of
         Normally 0 ->
@@ -34,7 +34,7 @@ main = do
 
   log "kills processes"
   spawn "ls" [ "-la" ] defaultSpawnOptions >>= \ls -> do
-    _ <- kill SIGTERM ls
+    _ <- kill ls
     ls # on_ exitH \exit ->
       case exit of
         BySignal SIGTERM ->

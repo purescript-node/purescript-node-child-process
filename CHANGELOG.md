@@ -19,10 +19,22 @@ Breaking changes:
     BySignal signal -> ...
   ```
   See https://pursuit.purescript.org/packages/purescript-node-event-emitter/3.0.0/docs/Node.EventEmitter for more details.
+- Update `pid` type signature to return `Maybe Pid` rather than `Pid` (#44 by @JordanMartinez)
+- Update `kill` returned value from `Effect Unit` to `Effect Boolean` (#44 by @JordanMartinez)
 
 
 New features:
 - Added event handler for `spawn` event (#43 by @JordanMartinez)
+- Added missing APIs (#44 by @JordanMartinez)
+
+  - exitCode
+  - kill (no signal specified)
+  - kill' (kill with a `String` signal)
+  - killSignal (kill with an ADT `Signal` arg)
+  - killed
+  - signalCode
+  - spawnArgs
+  - spawnFile
 
 Bugfixes:
 
@@ -30,6 +42,7 @@ Other improvements:
 - Bumped CI's node version to `lts/*` (#41 by @JordanMartinez)
 - Updated CI `actions/checkout` and `actions/setup-nodee` to `v3` (#41 by @JordanMartinez)
 - Format codebase & enforce formatting in CI via purs-tidy (#42 by @JordanMartinez)
+- Migrate more FFI to uncurried functions (#44 by @JordanMartinez)
 
 ## [v9.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v9.0.0) - 2022-04-29
 
