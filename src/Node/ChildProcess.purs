@@ -88,7 +88,7 @@ type ChildProcessRec =
   , pid :: Pid
   , connected :: Boolean
   , kill :: String -> Unit
-  , send :: forall r. Fn2 { | r} Handle Boolean
+  , send :: forall r. Fn2 { | r } Handle Boolean
   , disconnect :: Effect Unit
   }
 
@@ -110,8 +110,8 @@ stderr = unsafeFromNullable (missingStream "stderr") <<< _.stderr <<< runChildPr
 missingStream :: String -> String
 missingStream str =
   "Node.ChildProcess: stream not available: " <> str <> "\nThis is probably "
-  <> "because you passed something other than Pipe to the stdio option when "
-  <> "you spawned it."
+    <> "because you passed something other than Pipe to the stdio option when "
+    <> "you spawned it."
 
 foreign import unsafeFromNullable :: forall a. String -> Nullable a -> a
 
@@ -491,7 +491,7 @@ data StdIOBehaviour
 
 -- | Create pipes for each of the three standard IO streams.
 pipe :: Array (Maybe StdIOBehaviour)
-pipe = map Just [Pipe, Pipe, Pipe]
+pipe = map Just [ Pipe, Pipe, Pipe ]
 
 -- | Share `stdin` with `stdin`, `stdout` with `stdout`,
 -- | and `stderr` with `stderr`.
@@ -506,8 +506,7 @@ foreign import process :: forall props. { | props }
 
 -- | Ignore all streams.
 ignore :: Array (Maybe StdIOBehaviour)
-ignore = map Just [Ignore, Ignore, Ignore]
-
+ignore = map Just [ Ignore, Ignore, Ignore ]
 
 -- Helpers
 
