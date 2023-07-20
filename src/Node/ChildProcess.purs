@@ -199,6 +199,9 @@ spawnArgs = unsafeCoerce SafeCP.spawnArgs
 spawnFile :: ChildProcess -> String
 spawnFile = unsafeCoerce SafeCP.spawnFile
 
+-- | Note: `exitStatus` combines the `status` and `signal` fields
+-- | from the value normally returned by `spawnSync` into one value
+-- | since only one of them can be non-null at the end.
 type SpawnSyncResult =
   { pid :: Pid
   , output :: Array Foreign
@@ -224,6 +227,18 @@ spawnSync command args = (UnsafeCP.spawnSync command args) <#> \r ->
   , error: toMaybe r.error
   }
 
+-- | - `cwd` <string> | <URL> Current working directory of the child process.
+-- | - `input` <string> | <Buffer> | <TypedArray> | <DataView> The value which will be passed as stdin to the spawned process. Supplying this value will override stdio[0].
+-- | - `argv0` <string> Explicitly set the value of argv[0] sent to the child process. This will be set to command if not specified.
+-- | - `env` <Object> Environment key-value pairs. Default: process.env.
+-- | - `uid` <number> Sets the user identity of the process (see setuid(2)).
+-- | - `gid` <number> Sets the group identity of the process (see setgid(2)).
+-- | - `timeout` <number> In milliseconds the maximum amount of time the process is allowed to run. Default: undefined.
+-- | - `killSignal` <string> | <integer> The signal value to be used when the spawned process will be killed. Default: 'SIGTERM'.
+-- | - `maxBuffer` <number> Largest amount of data in bytes allowed on stdout or stderr. If exceeded, the child process is terminated and any output is truncated. See caveat at maxBuffer and Unicode. Default: 1024 * 1024.
+-- | - `shell` <boolean> | <string> If true, runs command inside of a shell. Uses '/bin/sh' on Unix, and process.env.ComSpec on Windows. A different shell can be specified as a string. See Shell requirements and Default Windows shell. Default: false (no shell).
+-- | - `windowsVerbatimArguments` <boolean> No quoting or escaping of arguments is done on Windows. Ignored on Unix. This is set to true automatically when shell is specified and is CMD. Default: false.
+-- | - `windowsHide` <boolean> Hide the subprocess console window that would normally be created on Windows systems. Default: false.
 type SpawnSyncOptions =
   { cwd :: Maybe String
   , input :: Maybe Buffer
@@ -300,6 +315,19 @@ spawn
   -> Effect ChildProcess
 spawn cmd args = coerce $ UnsafeCP.spawn' cmd args { stdio: safeStdio }
 
+-- | - `cwd` <string> | <URL> Current working directory of the child process.
+-- | - `env` <Object> Environment key-value pairs. Default: process.env.
+-- | - `argv0` <string> Explicitly set the value of argv[0] sent to the child process. This will be set to command if not specified.
+-- | - `detached` <boolean> Prepare child to run independently of its parent process. Specific behavior depends on the platform, see options.detached).
+-- | - `uid` <number> Sets the user identity of the process (see setuid(2)).
+-- | - `gid` <number> Sets the group identity of the process (see setgid(2)).
+-- | - `serialization` <string> Specify the kind of serialization used for sending messages between processes. Possible values are 'json' and 'advanced'. See Advanced serialization for more details. Default: 'json'.
+-- | - `shell` <boolean> | <string> If true, runs command inside of a shell. Uses '/bin/sh' on Unix, and process.env.ComSpec on Windows. A different shell can be specified as a string. See Shell requirements and Default Windows shell. Default: false (no shell).
+-- | - `windowsVerbatimArguments` <boolean> No quoting or escaping of arguments is done on Windows. Ignored on Unix. This is set to true automatically when shell is specified and is CMD. Default: false.
+-- | - `windowsHide` <boolean> Hide the subprocess console window that would normally be created on Windows systems. Default: false.
+-- | - `signal` <AbortSignal> allows aborting the child process using an AbortSignal.
+-- | - `timeout` <number> In milliseconds the maximum amount of time the process is allowed to run. Default: undefined.
+-- | - `killSignal` <string> | <integer> The signal value to be used when the spawned process will be killed by timeout or abort signal. Default: 'SIGTERM'.
 type SpawnOptions =
   { cwd :: Maybe String
   , env :: Maybe (Object String)
@@ -503,6 +531,16 @@ execFileSync
 execFileSync file args =
   map unsafeSOBToBuffer $ UnsafeCP.execFileSync' file args { stdio: safeStdio, encoding: "buffer" }
 
+-- | - `cwd` <string> | <URL> Current working directory of the child process.
+-- | - `input` <string> | <Buffer> | <TypedArray> | <DataView> The value which will be passed as stdin to the spawned process. Supplying this value will override stdio[0].
+-- | - `env` <Object> Environment key-value pairs. Default: process.env.
+-- | - `uid` <number> Sets the user identity of the process (see setuid(2)).
+-- | - `gid` <number> Sets the group identity of the process (see setgid(2)).
+-- | - `timeout` <number> In milliseconds the maximum amount of time the process is allowed to run. Default: undefined.
+-- | - `killSignal` <string> | <integer> The signal value to be used when the spawned process will be killed. Default: 'SIGTERM'.
+-- | - `maxBuffer` <number> Largest amount of data in bytes allowed on stdout or stderr. If exceeded, the child process is terminated. See caveat at maxBuffer and Unicode. Default: 1024 * 1024.
+-- | - `windowsHide` <boolean> Hide the subprocess console window that would normally be created on Windows systems. Default: false.
+-- | - `shell` <boolean> | <string> If true, runs command inside of a shell. Uses '/bin/sh' on Unix, and process.env.ComSpec on Windows. A different shell can be specified as a string. See Shell requirements and Default Windows shell. Default: false (no shell).
 type ExecFileSyncOptions =
   { cwd :: Maybe String
   , input :: Maybe Buffer
@@ -561,6 +599,16 @@ execFile
   -> Effect ChildProcess
 execFile cmd args = coerce $ UnsafeCP.execFileOpts cmd args { encoding: "buffer" }
 
+-- | - `cwd` <string> | <URL> Current working directory of the child process.
+-- | - `env` <Object> Environment key-value pairs. Default: process.env.
+-- | - `timeout` <number> Default: 0
+-- | - `maxBuffer` <number> Largest amount of data in bytes allowed on stdout or stderr. If exceeded, the child process is terminated and any output is truncated. See caveat at maxBuffer and Unicode. Default: 1024 * 1024.
+-- | - `killSignal` <string> | <integer> Default: 'SIGTERM'
+-- | - `uid` <number> Sets the user identity of the process (see setuid(2)).
+-- | - `gid` <number> Sets the group identity of the process (see setgid(2)).
+-- | - `windowsHide` <boolean> Hide the subprocess console window that would normally be created on Windows systems. Default: false.
+-- | - `windowsVerbatimArguments` <boolean> No quoting or escaping of arguments is done on Windows. Ignored on Unix. Default: false.
+-- | - `shell` <boolean> | <string> If true, runs command inside of a shell. Uses '/bin/sh' on Unix, and process.env.ComSpec on Windows. A different shell can be specified as a string. See Shell requirements and Default Windows shell. Default: false (no shell).
 type ExecFileOptions =
   { cwd :: Maybe String
   , env :: Maybe (Object String)
@@ -618,6 +666,19 @@ fork
   -> Effect ChildProcess
 fork modulePath args = coerce $ UnsafeCP.fork' modulePath args { stdio: safeStdio }
 
+-- | - `cwd` <string> | <URL> Current working directory of the child process.
+-- | - `detached` <boolean> Prepare child to run independently of its parent process. Specific behavior depends on the platform, see options.detached).
+-- | - `env` <Object> Environment key-value pairs. Default: process.env.
+-- | - `execPath` <string> Executable used to create the child process.
+-- | - `execArgv` <string[]> List of string arguments passed to the executable. Default: process.execArgv.
+-- | - `gid` <number> Sets the group identity of the process (see setgid(2)).
+-- | - `serialization` <string> Specify the kind of serialization used for sending messages between processes. Possible values are 'json' and 'advanced'. See Advanced serialization for more details. Default: 'json'.
+-- | - `signal` <AbortSignal> Allows closing the child process using an AbortSignal.
+-- | - `killSignal` <string> | <integer> The signal value to be used when the spawned process will be killed by timeout or abort signal. Default: 'SIGTERM'.
+-- | - `silent` <boolean> If true, stdin, stdout, and stderr of the child will be piped to the parent, otherwise they will be inherited from the parent, see the 'pipe' and 'inherit' options for child_process.spawn()'s stdio for more details. Default: false.
+-- | - `uid` <number> Sets the user identity of the process (see setuid(2)).
+-- | - `windowsVerbatimArguments` <boolean> No quoting or escaping of arguments is done on Windows. Ignored on Unix. Default: false.
+-- | - `timeout` <number> In milliseconds the maximum amount of time the process is allowed to run. Default: undefined.
 type ForkOptions =
   { cwd :: Maybe String
   , detached :: Maybe Boolean
@@ -684,6 +745,7 @@ send
   -> Effect Boolean
 send msg handle cp = UnsafeCP.unsafeSend msg (toNullable handle) (coerce cp)
 
+-- | - `keepAlive` <boolean> A value that can be used when passing instances of `net.Socket` as the `Handle`. When true, the socket is kept open in the sending process. Default: false.
 type SendOptions =
   { keepAlive :: Maybe Boolean
   }
