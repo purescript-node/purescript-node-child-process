@@ -18,6 +18,9 @@ foreign import data UnsafeChildProcess :: Type
 toEventEmitter :: UnsafeChildProcess -> EventEmitter
 toEventEmitter = unsafeCoerce
 
+-- | A handle for inter-process communication (IPC).
+foreign import data Handle :: Type
+
 -- | See https://nodejs.org/docs/latest-v18.x/api/child_process.html#optionsstdio
 foreign import data StdIO :: Type
 

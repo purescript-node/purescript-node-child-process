@@ -22,7 +22,10 @@ Breaking changes:
 - Update `pid` type signature to return `Maybe Pid` rather than `Pid` (#44 by @JordanMartinez)
 - Update `kill` returned value from `Effect Unit` to `Effect Boolean` (#44 by @JordanMartinez)
 - Migrate `Error` to `node-os`' `SystemError` (#45 by @JordanMartinez)
-- Moved `Exit` type from `Node.ChildProces` to ``Node.ChildProces.Types` (#46 by @JordanMartinez)
+- Moved types from `Node.ChildProces` to ``Node.ChildProces.Types` (#46 by @JordanMartinez)
+
+  - `Exit(Normally, BySignal)`
+  - `Handle`
 
 New features:
 - Added event handler for `spawn` event (#43 by @JordanMartinez)

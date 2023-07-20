@@ -61,8 +61,7 @@ import Effect.Uncurried (EffectFn1, EffectFn2, EffectFn3, EffectFn4, EffectFn5, 
 import Foreign (Foreign)
 import Foreign.Object (Object)
 import Node.Buffer (Buffer)
-import Node.ChildProcess (Handle)
-import Node.ChildProcess.Types (KillSignal, Shell, StdIO, StringOrBuffer, UnsafeChildProcess)
+import Node.ChildProcess.Types (Handle, KillSignal, Shell, StdIO, StringOrBuffer, UnsafeChildProcess)
 import Node.Errors.SystemError (SystemError)
 import Node.Stream (Readable, Writable)
 import Prim.Row as Row

@@ -12,8 +12,7 @@
 -- | forms the basis for this module and has in-depth documentation about
 -- | runtime behaviour.
 module Node.ChildProcess
-  ( Handle
-  , ChildProcess
+  ( ChildProcess
   , toEventEmitter
   , closeH
   , disconnectH
@@ -67,7 +66,7 @@ import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, mkEffectFn2, runEffe
 import Foreign (Foreign)
 import Foreign.Object (Object)
 import Node.Buffer (Buffer)
-import Node.ChildProcess.Types (Exit(..))
+import Node.ChildProcess.Types (Exit(..), Handle)
 import Node.Encoding (Encoding, encodingToNode)
 import Node.Errors.SystemError (SystemError)
 import Node.EventEmitter (EventEmitter, EventHandle(..))
@@ -76,9 +75,6 @@ import Node.FS as FS
 import Node.Stream (Readable, Stream, Writable)
 import Partial.Unsafe (unsafeCrashWith)
 import Unsafe.Coerce (unsafeCoerce)
-
--- | A handle for inter-process communication (IPC).
-foreign import data Handle :: Type
 
 -- | Opaque type returned by `spawn`, `fork` and `exec`.
 -- | Needed as input for most methods in this module.
