@@ -4,16 +4,35 @@
 -- | It is intended to be imported qualified, as follows:
 -- |
 -- | ```purescript
--- | import Node.ChildProcess (ChildProcess, CHILD_PROCESS)
 -- | import Node.ChildProcess as ChildProcess
+-- | -- or...
+-- | import Node.ChildProcess as CP
 -- | ```
 -- |
 -- | The [Node.js documentation](https://nodejs.org/api/child_process.html)
 -- | forms the basis for this module and has in-depth documentation about
 -- | runtime behaviour.
+-- |
+-- | ## Meaning of `appendStdio`
+-- |
+-- | By default, `ChildProcess` uses `safeStdio` for its `stdio` option. However,
+-- | Node allows one to pass in additional values besides the typical 3 (i.e. `stdin`, `stdout`, `stderr`)
+-- | and the IPC channel that might be used (i.e. `ipc`). Thus, `appendStdio` is an option
+-- | defined in this library that doesn't exist in the Node docs.
+-- | It exists to allow the end-user to append additional values to the `safeStdio` value
+-- | used here. For example,
+-- | 
+-- | ```
+-- | spawn' file args (_ { appendStdio = Just [ fileDescriptor8, pipe, pipe ]})
+-- | ```
+-- |
+-- | would end up calling `spawn` with the following `stdio`:
+-- | ```
+-- | -- i.e. `safeStdio <> [ fileDescriptor8, pipe, pipe ]`
+-- | [pipe, pipe, pipe, ipc, fileDescriptor8, pipe, pipe]
+-- | ```
 module Node.ChildProcess
-  ( Handle
-  , ChildProcess
+  ( ChildProcess
   , toEventEmitter
   , closeH
   , disconnectH
@@ -33,173 +52,127 @@ module Node.ChildProcess
   , killSignal
   , killed
   , signalCode
-  , send
-  , Exit(..)
+  , spawnFile
+  , spawnArgs
+  , spawnSync
+  , SpawnSyncOptions
+  , spawnSync'
   , spawn
   , SpawnOptions
-  , defaultSpawnOptions
-  , exec
-  , execFile
-  , ExecOptions
-  , ExecResult
-  , defaultExecOptions
+  , spawn'
   , execSync
-  , execFileSync
   , ExecSyncOptions
-  , defaultExecSyncOptions
+  , execSync'
+  , exec
+  , ExecResult
+  , ExecOptions
+  , exec'
+  , execFileSync
+  , ExecFileSyncOptions
+  , execFileSync'
+  , execFile
+  , ExecFileOptions
+  , execFile'
   , fork
-  , StdIOBehaviour(..)
-  , pipe
-  , inherit
-  , ignore
+  , fork'
+  , send
+  , send'
   ) where
 
 import Prelude
 
-import Data.Function.Uncurried (Fn2, runFn2)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Nullable (Nullable, toMaybe, toNullable)
 import Data.Posix (Pid, Gid, Uid)
 import Data.Posix.Signal (Signal)
-import Data.Posix.Signal as Signal
+import Data.Time.Duration (Milliseconds)
 import Effect (Effect)
-import Effect.Exception as Exception
-import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, mkEffectFn2, runEffectFn1, runEffectFn2)
+import Effect.Exception (Error)
+import Effect.Uncurried (EffectFn2)
 import Foreign (Foreign)
 import Foreign.Object (Object)
 import Node.Buffer (Buffer)
-import Node.Encoding (Encoding, encodingToNode)
+import Node.ChildProcess.Types (Exit(..), Handle, KillSignal, Shell, StdIO, UnsafeChildProcess)
 import Node.Errors.SystemError (SystemError)
-import Node.EventEmitter (EventEmitter, EventHandle(..))
+import Node.EventEmitter (EventEmitter, EventHandle)
 import Node.EventEmitter.UtilTypes (EventHandle0, EventHandle1)
-import Node.FS as FS
-import Node.Stream (Readable, Stream, Writable)
+import Node.Stream (Readable, Writable)
+import Node.UnsafeChildProcess.Safe (safeStdio)
+import Node.UnsafeChildProcess.Safe as SafeCP
+import Node.UnsafeChildProcess.Unsafe (unsafeSOBToBuffer)
+import Node.UnsafeChildProcess.Unsafe as UnsafeCP
 import Partial.Unsafe (unsafeCrashWith)
+import Safe.Coerce (coerce)
 import Unsafe.Coerce (unsafeCoerce)
-
--- | A handle for inter-process communication (IPC).
-foreign import data Handle :: Type
 
 -- | Opaque type returned by `spawn`, `fork` and `exec`.
 -- | Needed as input for most methods in this module.
 -- |
 -- | `ChildProcess` extends `EventEmitter`
-newtype ChildProcess = ChildProcess ChildProcessRec
+newtype ChildProcess = ChildProcess UnsafeChildProcess
 
 toEventEmitter :: ChildProcess -> EventEmitter
-toEventEmitter = unsafeCoerce
+toEventEmitter = toUnsafeChildProcess >>> SafeCP.toEventEmitter
+
+toUnsafeChildProcess :: ChildProcess -> UnsafeChildProcess
+toUnsafeChildProcess (ChildProcess p) = p
 
 closeH :: EventHandle ChildProcess (Exit -> Effect Unit) (EffectFn2 (Nullable Int) (Nullable String) Unit)
-closeH = EventHandle "close" \cb -> mkEffectFn2 \code signal ->
-  case toMaybe code, toMaybe signal >>= Signal.fromString of
-    Just c, _ -> cb $ Normally c
-    _, Just s -> cb $ BySignal s
-    _, _ -> unsafeCrashWith $ "Impossible. 'close' event did not get an exit code or kill signal: " <> show code <> "; " <> show signal
+closeH = unsafeCoerce SafeCP.closeH
 
 disconnectH :: EventHandle0 ChildProcess
-disconnectH = EventHandle "disconnect" identity
+disconnectH = unsafeCoerce SafeCP.disconnectH
 
 errorH :: EventHandle1 ChildProcess SystemError
-errorH = EventHandle "error" mkEffectFn1
+errorH = unsafeCoerce SafeCP.errorH
 
 exitH :: EventHandle ChildProcess (Exit -> Effect Unit) (EffectFn2 (Nullable Int) (Nullable String) Unit)
-exitH = EventHandle "exitH" \cb -> mkEffectFn2 \code signal ->
-  case toMaybe code, toMaybe signal >>= Signal.fromString of
-    Just c, _ -> cb $ Normally c
-    _, Just s -> cb $ BySignal s
-    _, _ -> unsafeCrashWith $ "Impossible. 'exit' event did not get an exit code or kill signal: " <> show code <> "; " <> show signal
+exitH = unsafeCoerce SafeCP.exitH
 
 messageH :: EventHandle ChildProcess (Foreign -> Maybe Handle -> Effect Unit) (EffectFn2 Foreign (Nullable Handle) Unit)
-messageH = EventHandle "message" \cb -> mkEffectFn2 \a b -> cb a $ toMaybe b
+messageH = unsafeCoerce SafeCP.messageH
 
 spawnH :: EventHandle0 ChildProcess
-spawnH = EventHandle "spawn" identity
+spawnH = unsafeCoerce SafeCP.spawnH
 
-runChildProcess :: ChildProcess -> ChildProcessRec
-runChildProcess (ChildProcess r) = r
+unsafeFromNull :: forall a. Nullable a -> a
+unsafeFromNull = unsafeCoerce
 
--- | Note: some of these types are lies, and so it is unsafe to access some of
--- | these record fields directly.
-type ChildProcessRec =
-  { stdin :: Nullable (Writable ())
-  , stdout :: Nullable (Readable ())
-  , stderr :: Nullable (Readable ())
-  , pid :: Pid
-  , connected :: Boolean
-  , kill :: String -> Unit
-  , send :: forall r. Fn2 { | r } Handle Boolean
-  , disconnect :: Effect Unit
-  }
-
--- | The standard input stream of a child process. Note that this is only
--- | available if the process was spawned with the stdin option set to "pipe".
+-- | The standard input stream of a child process.
 stdin :: ChildProcess -> Writable ()
-stdin = unsafeFromNullable (missingStream "stdin") <<< _.stdin <<< runChildProcess
+stdin = toUnsafeChildProcess >>> UnsafeCP.unsafeStdin >>> unsafeFromNull
 
--- | The standard output stream of a child process. Note that this is only
--- | available if the process was spawned with the stdout option set to "pipe".
+-- | The standard output stream of a child process.
 stdout :: ChildProcess -> Readable ()
-stdout = unsafeFromNullable (missingStream "stdout") <<< _.stdout <<< runChildProcess
+stdout = toUnsafeChildProcess >>> UnsafeCP.unsafeStdout >>> unsafeFromNull
 
--- | The standard error stream of a child process. Note that this is only
--- | available if the process was spawned with the stderr option set to "pipe".
+-- | The standard error stream of a child process.
 stderr :: ChildProcess -> Readable ()
-stderr = unsafeFromNullable (missingStream "stderr") <<< _.stderr <<< runChildProcess
+stderr = toUnsafeChildProcess >>> UnsafeCP.unsafeStderr >>> unsafeFromNull
 
-missingStream :: String -> String
-missingStream str =
-  "Node.ChildProcess: stream not available: " <> str <> "\nThis is probably "
-    <> "because you passed something other than Pipe to the stdio option when "
-    <> "you spawned it."
-
-foreign import unsafeFromNullable :: forall a. String -> Nullable a -> a
-
--- | The process ID of a child process. Note that if the process has already
+-- | The process ID of a child process. This will be `Nothing` until
+-- | the process has spawned. Note that if the process has already
 -- | exited, another process may have taken the same ID, so be careful!
 pid :: ChildProcess -> Effect (Maybe Pid)
-pid cp = map toMaybe $ runEffectFn1 pidImpl cp
-
-foreign import pidImpl :: EffectFn1 (ChildProcess) (Nullable Pid)
+pid = unsafeCoerce SafeCP.pid
 
 -- | Indicates whether it is still possible to send and receive
 -- | messages from the child process.
 connected :: ChildProcess -> Effect Boolean
-connected cp = runEffectFn1 connectedImpl cp
-
-foreign import connectedImpl :: EffectFn1 (ChildProcess) (Boolean)
+connected = unsafeCoerce SafeCP.connected
 
 exitCode :: ChildProcess -> Effect (Maybe Int)
-exitCode cp = map toMaybe $ runEffectFn1 exitCodeImpl cp
-
-foreign import exitCodeImpl :: EffectFn1 (ChildProcess) (Nullable Int)
-
--- | Send messages to the (`nodejs`) child process.
--- |
--- | See the [node documentation](https://nodejs.org/api/child_process.html#child_process_subprocess_send_message_sendhandle_options_callback)
--- | for in-depth documentation.
-send
-  :: forall props
-   . { | props }
-  -> Handle
-  -> ChildProcess
-  -> Effect Boolean
-send msg handle (ChildProcess cp) = mkEffect \_ -> runFn2 cp.send msg handle
+exitCode = unsafeCoerce SafeCP.exitCode
 
 -- | Closes the IPC channel between parent and child.
 disconnect :: ChildProcess -> Effect Unit
-disconnect cp = runEffectFn1 disconnectImpl cp
-
-foreign import disconnectImpl :: EffectFn1 (ChildProcess) (Unit)
+disconnect = unsafeCoerce SafeCP.disconnect
 
 kill :: ChildProcess -> Effect Boolean
-kill cp = runEffectFn1 killImpl cp
-
-foreign import killImpl :: EffectFn1 (ChildProcess) (Boolean)
+kill = unsafeCoerce SafeCP.kill
 
 kill' :: String -> ChildProcess -> Effect Boolean
-kill' sig cp = runEffectFn2 killStrImpl cp sig
-
-foreign import killStrImpl :: EffectFn2 (ChildProcess) (String) (Boolean)
+kill' = unsafeCoerce SafeCP.kill'
 
 -- | Send a signal to a child process. In the same way as the
 -- | [unix kill(2) system call](https://linux.die.net/man/2/kill),
@@ -210,34 +183,125 @@ foreign import killStrImpl :: EffectFn2 (ChildProcess) (String) (Boolean)
 -- | The child process might emit an `"error"` event if the signal
 -- | could not be delivered.
 killSignal :: Signal -> ChildProcess -> Effect Boolean
-killSignal sig cp = kill' (Signal.toString sig) cp
+killSignal = unsafeCoerce SafeCP.killSignal
 
 killed :: ChildProcess -> Effect Boolean
-killed cp = runEffectFn1 killedImpl cp
+killed = unsafeCoerce SafeCP.killed
 
 signalCode :: ChildProcess -> Effect (Maybe String)
-signalCode cp = map toMaybe $ runEffectFn1 signalCodeImpl cp
+signalCode = unsafeCoerce SafeCP.signalCode
 
-foreign import signalCodeImpl :: EffectFn1 (ChildProcess) (Nullable String)
+spawnArgs :: ChildProcess -> Array String
+spawnArgs = unsafeCoerce SafeCP.spawnArgs
 
-foreign import killedImpl :: EffectFn1 (ChildProcess) (Boolean)
+spawnFile :: ChildProcess -> String
+spawnFile = unsafeCoerce SafeCP.spawnFile
 
-foreign import spawnArgs :: ChildProcess -> Array String
+-- | Note: `exitStatus` combines the `status` and `signal` fields
+-- | from the value normally returned by `spawnSync` into one value
+-- | since only one of them can be non-null at the end.
+type SpawnSyncResult =
+  { pid :: Pid
+  , output :: Array Foreign
+  , stdout :: Buffer
+  , stderr :: Buffer
+  , exitStatus :: Exit
+  , error :: Maybe SystemError
+  }
 
-foreign import spawnFile :: ChildProcess -> String
+spawnSync
+  :: String
+  -> Array String
+  -> Effect SpawnSyncResult
+spawnSync command args = (UnsafeCP.spawnSync command args) <#> \r ->
+  { pid: r.pid
+  , output: r.output
+  , stdout: unsafeSOBToBuffer r.stdout
+  , stderr: unsafeSOBToBuffer r.stderr
+  , exitStatus: case toMaybe r.status, toMaybe r.signal of
+      Just c, _ -> Normally c
+      _, Just s -> BySignal s
+      _, _ -> unsafeCrashWith $ "Impossible: `spawnSync` child process neither exited nor was killed."
+  , error: toMaybe r.error
+  }
 
-mkEffect :: forall a. (Unit -> a) -> Effect a
-mkEffect = unsafeCoerce
+-- | - `cwd` <string> | <URL> Current working directory of the child process.
+-- | - `input` <string> | <Buffer> | <TypedArray> | <DataView> The value which will be passed as stdin to the spawned process. Supplying this value will override stdio[0].
+-- | - `argv0` <string> Explicitly set the value of argv[0] sent to the child process. This will be set to command if not specified.
+-- | - `env` <Object> Environment key-value pairs. Default: process.env.
+-- | - `uid` <number> Sets the user identity of the process (see setuid(2)).
+-- | - `gid` <number> Sets the group identity of the process (see setgid(2)).
+-- | - `timeout` <number> In milliseconds the maximum amount of time the process is allowed to run. Default: undefined.
+-- | - `killSignal` <string> | <integer> The signal value to be used when the spawned process will be killed. Default: 'SIGTERM'.
+-- | - `maxBuffer` <number> Largest amount of data in bytes allowed on stdout or stderr. If exceeded, the child process is terminated and any output is truncated. See caveat at maxBuffer and Unicode. Default: 1024 * 1024.
+-- | - `shell` <boolean> | <string> If true, runs command inside of a shell. Uses '/bin/sh' on Unix, and process.env.ComSpec on Windows. A different shell can be specified as a string. See Shell requirements and Default Windows shell. Default: false (no shell).
+-- | - `windowsVerbatimArguments` <boolean> No quoting or escaping of arguments is done on Windows. Ignored on Unix. This is set to true automatically when shell is specified and is CMD. Default: false.
+-- | - `windowsHide` <boolean> Hide the subprocess console window that would normally be created on Windows systems. Default: false.
+type SpawnSyncOptions =
+  { cwd :: Maybe String
+  , input :: Maybe Buffer
+  , appendStdio :: Maybe (Array StdIO)
+  , argv0 :: Maybe String
+  , env :: Maybe (Object String)
+  , uid :: Maybe Uid
+  , gid :: Maybe Gid
+  , timeout :: Maybe Milliseconds
+  , killSignal :: Maybe KillSignal
+  , maxBuffer :: Maybe Number
+  , shell :: Maybe Shell
+  , windowsVerbatimArguments :: Maybe Boolean
+  , windowsHide :: Maybe Boolean
+  }
 
--- | Specifies how a child process exited; normally (with an exit code), or
--- | due to a signal.
-data Exit
-  = Normally Int
-  | BySignal Signal
+spawnSync'
+  :: String
+  -> Array String
+  -> (SpawnSyncOptions -> SpawnSyncOptions)
+  -> Effect SpawnSyncResult
+spawnSync' command args buildOpts = (UnsafeCP.spawnSync' command args opts) <#> \r ->
+  { pid: r.pid
+  , output: r.output
+  , stdout: unsafeSOBToBuffer r.stdout
+  , stderr: unsafeSOBToBuffer r.stderr
+  , exitStatus: case toMaybe r.status, toMaybe r.signal of
+      Just c, _ -> Normally c
+      _, Just s -> BySignal s
+      _, _ -> unsafeCrashWith $ "Impossible: `spawnSync` child process neither exited nor was killed."
+  , error: toMaybe r.error
+  }
+  where
+  opts =
+    { stdio: maybe safeStdio (\rest -> safeStdio <> rest) o.appendStdio
+    , encoding: "buffer"
+    , cwd: fromMaybe undefined o.cwd
+    , input: fromMaybe undefined o.input
+    , argv0: fromMaybe undefined o.argv0
+    , env: fromMaybe undefined o.env
+    , uid: fromMaybe undefined o.uid
+    , gid: fromMaybe undefined o.gid
+    , timeout: fromMaybe undefined o.timeout
+    , killSignal: fromMaybe undefined o.killSignal
+    , maxBuffer: fromMaybe undefined o.maxBuffer
+    , shell: fromMaybe undefined o.shell
+    , windowsVerbatimArguments: fromMaybe undefined o.windowsVerbatimArguments
+    , windowsHide: fromMaybe undefined o.windowsHide
+    }
 
-instance showExit :: Show Exit where
-  show (Normally x) = "Normally " <> show x
-  show (BySignal sig) = "BySignal " <> show sig
+  o = buildOpts
+    { cwd: Nothing
+    , input: Nothing
+    , appendStdio: Nothing
+    , argv0: Nothing
+    , env: Nothing
+    , uid: Nothing
+    , gid: Nothing
+    , timeout: Nothing
+    , killSignal: Nothing
+    , maxBuffer: Nothing
+    , shell: Nothing
+    , windowsVerbatimArguments: Nothing
+    , windowsHide: Nothing
+    }
 
 -- | Spawn a child process. Note that, in the event that a child process could
 -- | not be spawned (for example, if the executable was not found) this will
@@ -246,50 +310,180 @@ instance showExit :: Show Exit where
 spawn
   :: String
   -> Array String
-  -> SpawnOptions
   -> Effect ChildProcess
-spawn cmd args = spawnImpl cmd args <<< convertOpts
-  where
-  convertOpts opts =
-    { cwd: fromMaybe undefined opts.cwd
-    , stdio: toActualStdIOOptions opts.stdio
-    , env: toNullable opts.env
-    , detached: opts.detached
-    , uid: fromMaybe undefined opts.uid
-    , gid: fromMaybe undefined opts.gid
-    }
+spawn cmd args = coerce $ UnsafeCP.spawn' cmd args { stdio: safeStdio }
 
-foreign import spawnImpl
-  :: forall opts
-   . String
-  -> Array String
-  -> { | opts }
-  -> Effect ChildProcess
-
--- There's gotta be a better way.
-foreign import undefined :: forall a. a
-
--- | Configuration of `spawn`. Fields set to `Nothing` will use
--- | the node defaults.
+-- | - `cwd` <string> | <URL> Current working directory of the child process.
+-- | - `env` <Object> Environment key-value pairs. Default: process.env.
+-- | - `argv0` <string> Explicitly set the value of argv[0] sent to the child process. This will be set to command if not specified.
+-- | - `detached` <boolean> Prepare child to run independently of its parent process. Specific behavior depends on the platform, see options.detached).
+-- | - `uid` <number> Sets the user identity of the process (see setuid(2)).
+-- | - `gid` <number> Sets the group identity of the process (see setgid(2)).
+-- | - `serialization` <string> Specify the kind of serialization used for sending messages between processes. Possible values are 'json' and 'advanced'. See Advanced serialization for more details. Default: 'json'.
+-- | - `shell` <boolean> | <string> If true, runs command inside of a shell. Uses '/bin/sh' on Unix, and process.env.ComSpec on Windows. A different shell can be specified as a string. See Shell requirements and Default Windows shell. Default: false (no shell).
+-- | - `windowsVerbatimArguments` <boolean> No quoting or escaping of arguments is done on Windows. Ignored on Unix. This is set to true automatically when shell is specified and is CMD. Default: false.
+-- | - `windowsHide` <boolean> Hide the subprocess console window that would normally be created on Windows systems. Default: false.
+-- | - `signal` <AbortSignal> allows aborting the child process using an AbortSignal.
+-- | - `timeout` <number> In milliseconds the maximum amount of time the process is allowed to run. Default: undefined.
+-- | - `killSignal` <string> | <integer> The signal value to be used when the spawned process will be killed by timeout or abort signal. Default: 'SIGTERM'.
 type SpawnOptions =
   { cwd :: Maybe String
-  , stdio :: Array (Maybe StdIOBehaviour)
   , env :: Maybe (Object String)
-  , detached :: Boolean
+  , argv0 :: Maybe String
+  , appendStdio :: Maybe (Array StdIO)
+  , detached :: Maybe Boolean
   , uid :: Maybe Uid
   , gid :: Maybe Gid
+  , serialization :: Maybe String
+  , shell :: Maybe Shell
+  , windowsVerbatimArguments :: Maybe Boolean
+  , windowsHide :: Maybe Boolean
+  , timeout :: Maybe Number
+  , killSignal :: Maybe KillSignal
   }
 
--- | A default set of `SpawnOptions`. Everything is set to `Nothing`,
--- | `detached` is `false` and `stdio` is `ChildProcess.pipe`.
-defaultSpawnOptions :: SpawnOptions
-defaultSpawnOptions =
-  { cwd: Nothing
-  , stdio: pipe
-  , env: Nothing
-  , detached: false
-  , uid: Nothing
-  , gid: Nothing
+spawn'
+  :: String
+  -> Array String
+  -> (SpawnOptions -> SpawnOptions)
+  -> Effect ChildProcess
+spawn' cmd args buildOpts = coerce $ UnsafeCP.spawn' cmd args opts
+  where
+  opts =
+    { stdio: maybe safeStdio (\rest -> safeStdio <> rest) o.appendStdio
+    , cwd: fromMaybe undefined o.cwd
+    , env: fromMaybe undefined o.env
+    , argv0: fromMaybe undefined o.argv0
+    , detached: fromMaybe undefined o.detached
+    , uid: fromMaybe undefined o.uid
+    , gid: fromMaybe undefined o.gid
+    , serialization: fromMaybe undefined o.serialization
+    , shell: fromMaybe undefined o.shell
+    , windowsVerbatimArguments: fromMaybe undefined o.windowsVerbatimArguments
+    , windowsHide: fromMaybe undefined o.windowsHide
+    , timeout: fromMaybe undefined o.timeout
+    , killSignal: fromMaybe undefined o.killSignal
+    }
+  o = buildOpts
+    { cwd: Nothing
+    , env: Nothing
+    , argv0: Nothing
+    , appendStdio: Nothing
+    , detached: Nothing
+    , uid: Nothing
+    , gid: Nothing
+    , serialization: Nothing
+    , shell: Nothing
+    , windowsVerbatimArguments: Nothing
+    , windowsHide: Nothing
+    , timeout: Nothing
+    , killSignal: Nothing
+    }
+
+-- | Generally identical to `exec`, with the exception that
+-- | the method will not return until the child process has fully closed.
+-- | Returns: The `stdout` from the command.
+execSync
+  :: String
+  -> Effect Buffer
+execSync cmd = map unsafeSOBToBuffer $ UnsafeCP.execSync cmd
+
+-- | - `cwd` <string> | <URL> Current working directory of the child process.
+-- | - `input` <string> | <Buffer> | <TypedArray> | <DataView> The value which will be passed as stdin to the spawned process. Supplying this value will override stdio[0].
+-- | - `stdio` <string> | <Array> Child's stdio configuration. stderr by default will be output to the parent process' stderr unless stdio is specified. Default: 'pipe'.
+-- | - `env` <Object> Environment key-value pairs. Default: process.env.
+-- | - `shell` <string> Shell to execute the command with. See Shell requirements and Default Windows shell. Default: '/bin/sh' on Unix, process.env.ComSpec on Windows.
+-- | - `uid` <number> Sets the user identity of the process. (See setuid(2)).
+-- | - `gid` <number> Sets the group identity of the process. (See setgid(2)).
+-- | - `timeout` <number> In milliseconds the maximum amount of time the process is allowed to run. Default: undefined.
+-- | - `killSignal` <string> | <integer> The signal value to be used when the spawned process will be killed. Default: 'SIGTERM'.
+-- | - `maxBuffer` <number> Largest amount of data in bytes allowed on stdout or stderr. If exceeded, the child process is terminated and any output is truncated. See caveat at maxBuffer and Unicode. Default: 1024 * 1024.
+-- | - `encoding` <string> The encoding used for all stdio inputs and outputs. Default: 'buffer'.
+-- | - `windowsHide` <boolean> Hide the subprocess console window that would normally be created on Windows systems. Default: false.
+type ExecSyncOptions =
+  { cwd :: Maybe String
+  , input :: Maybe Buffer
+  , appendStdio :: Maybe (Array StdIO)
+  , env :: Maybe (Object String)
+  , shell :: Maybe String
+  , uid :: Maybe Uid
+  , gid :: Maybe Gid
+  , timeout :: Maybe Milliseconds
+  , killSignal :: Maybe KillSignal
+  , maxBuffer :: Maybe Number
+  , windowsHide :: Maybe Boolean
+  }
+
+execSync'
+  :: String
+  -> (ExecSyncOptions -> ExecSyncOptions)
+  -> Effect Buffer
+execSync' cmd buildOpts = do
+  map unsafeSOBToBuffer $ UnsafeCP.execSync' cmd opts
+  where
+  o = buildOpts
+    { cwd: Nothing
+    , input: Nothing
+    , appendStdio: Nothing
+    , env: Nothing
+    , shell: Nothing
+    , uid: Nothing
+    , gid: Nothing
+    , timeout: Nothing
+    , killSignal: Nothing
+    , maxBuffer: Nothing
+    , windowsHide: Nothing
+    }
+  opts =
+    { stdio: maybe safeStdio (\rest -> safeStdio <> rest) o.appendStdio
+    , encoding: "buffer"
+    , cwd: fromMaybe undefined o.cwd
+    , input: fromMaybe undefined o.input
+    , env: fromMaybe undefined o.env
+    , shell: fromMaybe undefined o.shell
+    , uid: fromMaybe undefined o.uid
+    , gid: fromMaybe undefined o.gid
+    , timeout: fromMaybe undefined o.timeout
+    , killSignal: fromMaybe undefined o.killSignal
+    , maxBuffer: fromMaybe undefined o.maxBuffer
+    , windowsHide: fromMaybe undefined o.windowsHide
+    }
+
+-- | Similar to `spawn`, except that this variant will:
+-- | * run the given command with the shell,
+-- | * buffer output, and wait until the process has exited.
+-- |
+-- | Note that the child process will be killed if the amount of output exceeds
+-- | a certain threshold (the default is defined by Node.js).
+exec :: String -> Effect ChildProcess
+exec command = coerce $ UnsafeCP.execOpts command { encoding: "buffer" }
+
+-- | The combined output of a process called with `exec`.
+type ExecResult =
+  { stdout :: Buffer
+  , stderr :: Buffer
+  , error :: Maybe SystemError
+  }
+
+-- | - `cwd` <string> | <URL> Current working directory of the child process.
+-- | - `env` <Object> Environment key-value pairs. Default: process.env.
+-- | - `timeout` <number> Default: 0
+-- | - `maxBuffer` <number> Largest amount of data in bytes allowed on stdout or stderr. If exceeded, the child process is terminated and any output is truncated. See caveat at maxBuffer and Unicode. Default: 1024 * 1024.
+-- | - `killSignal` <string> | <integer> Default: 'SIGTERM'
+-- | - `uid` <number> Sets the user identity of the process (see setuid(2)).
+-- | - `gid` <number> Sets the group identity of the process (see setgid(2)).
+-- | - `windowsHide` <boolean> Hide the subprocess console window that would normally be created on Windows systems. Default: false.
+-- | - `shell` <boolean> | <string> If true, runs command inside of a shell. Uses '/bin/sh' on Unix, and process.env.ComSpec on Windows. A different shell can be specified as a string. See Shell requirements and Default Windows shell. Default: false (no shell).
+type ExecOptions =
+  { cwd :: Maybe String
+  , env :: Maybe (Object String)
+  , timeout :: Maybe Number
+  , maxBuffer :: Maybe Number
+  , killSignal :: Maybe KillSignal
+  , uid :: Maybe Uid
+  , gid :: Maybe Gid
+  , windowsHide :: Maybe Boolean
+  , shell :: Maybe Shell
   }
 
 -- | Similar to `spawn`, except that this variant will:
@@ -299,230 +493,283 @@ defaultSpawnOptions =
 -- |
 -- | Note that the child process will be killed if the amount of output exceeds
 -- | a certain threshold (the default is defined by Node.js).
-exec
+exec'
   :: String
-  -> ExecOptions
+  -> (ExecOptions -> ExecOptions)
   -> (ExecResult -> Effect Unit)
   -> Effect ChildProcess
-exec cmd opts callback =
-  execImpl cmd (convertExecOptions opts) \err stdout' stderr' ->
-    callback
-      { error: toMaybe err
-      , stdout: stdout'
-      , stderr: stderr'
-      }
+exec' command buildOpts cb = coerce $ UnsafeCP.execOptsCb command opts \err sout serr ->
+  cb { stdout: unsafeSOBToBuffer sout, stderr: unsafeSOBToBuffer serr, error: err }
+  where
+  opts =
+    { encoding: "buffer"
+    , cwd: fromMaybe undefined o.cwd
+    , env: fromMaybe undefined o.env
+    , timeout: fromMaybe undefined o.timeout
+    , maxBuffer: fromMaybe undefined o.maxBuffer
+    , killSignal: fromMaybe undefined o.killSignal
+    , uid: fromMaybe undefined o.uid
+    , gid: fromMaybe undefined o.gid
+    , windowsHide: fromMaybe undefined o.windowsHide
+    , shell: fromMaybe undefined o.shell
+    }
+  o = buildOpts
+    { cwd: Nothing
+    , env: Nothing
+    , timeout: Nothing
+    , maxBuffer: Nothing
+    , killSignal: Nothing
+    , uid: Nothing
+    , gid: Nothing
+    , windowsHide: Nothing
+    , shell: Nothing
+    }
 
-foreign import execImpl
+-- | Generally identical to `execFile`, with the exception that
+-- | the method will not return until the child process has fully closed.
+-- | Returns: The `stdout` from the command.
+execFileSync
   :: String
-  -> ActualExecOptions
-  -> (Nullable Exception.Error -> Buffer -> Buffer -> Effect Unit)
-  -> Effect ChildProcess
+  -> Array String
+  -> Effect Buffer
+execFileSync file args =
+  map unsafeSOBToBuffer $ UnsafeCP.execFileSync' file args { stdio: safeStdio, encoding: "buffer" }
+
+-- | - `cwd` <string> | <URL> Current working directory of the child process.
+-- | - `input` <string> | <Buffer> | <TypedArray> | <DataView> The value which will be passed as stdin to the spawned process. Supplying this value will override stdio[0].
+-- | - `env` <Object> Environment key-value pairs. Default: process.env.
+-- | - `uid` <number> Sets the user identity of the process (see setuid(2)).
+-- | - `gid` <number> Sets the group identity of the process (see setgid(2)).
+-- | - `timeout` <number> In milliseconds the maximum amount of time the process is allowed to run. Default: undefined.
+-- | - `killSignal` <string> | <integer> The signal value to be used when the spawned process will be killed. Default: 'SIGTERM'.
+-- | - `maxBuffer` <number> Largest amount of data in bytes allowed on stdout or stderr. If exceeded, the child process is terminated. See caveat at maxBuffer and Unicode. Default: 1024 * 1024.
+-- | - `windowsHide` <boolean> Hide the subprocess console window that would normally be created on Windows systems. Default: false.
+-- | - `shell` <boolean> | <string> If true, runs command inside of a shell. Uses '/bin/sh' on Unix, and process.env.ComSpec on Windows. A different shell can be specified as a string. See Shell requirements and Default Windows shell. Default: false (no shell).
+type ExecFileSyncOptions =
+  { cwd :: Maybe String
+  , input :: Maybe Buffer
+  , appendStdio :: Maybe (Array StdIO)
+  , env :: Maybe (Object String)
+  , uid :: Maybe Uid
+  , gid :: Maybe Gid
+  , timeout :: Maybe Milliseconds
+  , killSignal :: Maybe KillSignal
+  , maxBuffer :: Maybe Number
+  , windowsHide :: Maybe Boolean
+  , shell :: Maybe Shell
+  }
+
+execFileSync'
+  :: String
+  -> Array String
+  -> (ExecFileSyncOptions -> ExecFileSyncOptions)
+  -> Effect Buffer
+execFileSync' file args buildOpts =
+  map unsafeSOBToBuffer $ UnsafeCP.execFileSync' file args opts
+  where
+  opts =
+    { stdio: maybe safeStdio (\rest -> safeStdio <> rest) o.appendStdio
+    , encoding: "buffer"
+    , cwd: fromMaybe undefined o.cwd
+    , input: fromMaybe undefined o.input
+    , env: fromMaybe undefined o.env
+    , uid: fromMaybe undefined o.uid
+    , gid: fromMaybe undefined o.gid
+    , timeout: fromMaybe undefined o.timeout
+    , killSignal: fromMaybe undefined o.killSignal
+    , maxBuffer: fromMaybe undefined o.maxBuffer
+    , windowsHide: fromMaybe undefined o.windowsHide
+    , shell: fromMaybe undefined o.shell
+    }
+  o = buildOpts
+    { cwd: Nothing
+    , input: Nothing
+    , appendStdio: Nothing
+    , env: Nothing
+    , uid: Nothing
+    , gid: Nothing
+    , timeout: Nothing
+    , killSignal: Nothing
+    , maxBuffer: Nothing
+    , windowsHide: Nothing
+    , shell: Nothing
+    }
 
 -- | Like `exec`, except instead of using a shell, it passes the arguments
 -- | directly to the specified command.
 execFile
   :: String
   -> Array String
-  -> ExecOptions
+  -> Effect ChildProcess
+execFile cmd args = coerce $ UnsafeCP.execFileOpts cmd args { encoding: "buffer" }
+
+-- | - `cwd` <string> | <URL> Current working directory of the child process.
+-- | - `env` <Object> Environment key-value pairs. Default: process.env.
+-- | - `timeout` <number> Default: 0
+-- | - `maxBuffer` <number> Largest amount of data in bytes allowed on stdout or stderr. If exceeded, the child process is terminated and any output is truncated. See caveat at maxBuffer and Unicode. Default: 1024 * 1024.
+-- | - `killSignal` <string> | <integer> Default: 'SIGTERM'
+-- | - `uid` <number> Sets the user identity of the process (see setuid(2)).
+-- | - `gid` <number> Sets the group identity of the process (see setgid(2)).
+-- | - `windowsHide` <boolean> Hide the subprocess console window that would normally be created on Windows systems. Default: false.
+-- | - `windowsVerbatimArguments` <boolean> No quoting or escaping of arguments is done on Windows. Ignored on Unix. Default: false.
+-- | - `shell` <boolean> | <string> If true, runs command inside of a shell. Uses '/bin/sh' on Unix, and process.env.ComSpec on Windows. A different shell can be specified as a string. See Shell requirements and Default Windows shell. Default: false (no shell).
+type ExecFileOptions =
+  { cwd :: Maybe String
+  , env :: Maybe (Object String)
+  , timeout :: Maybe Number
+  , maxBuffer :: Maybe Number
+  , killSignal :: Maybe KillSignal
+  , uid :: Maybe Uid
+  , gid :: Maybe Gid
+  , windowsHide :: Maybe Boolean
+  , windowsVerbatimArguments :: Maybe Boolean
+  , shell :: Maybe Shell
+  }
+
+execFile'
+  :: String
+  -> Array String
+  -> (ExecFileOptions -> ExecFileOptions)
   -> (ExecResult -> Effect Unit)
   -> Effect ChildProcess
-execFile cmd args opts callback =
-  execFileImpl cmd args (convertExecOptions opts) \err stdout' stderr' ->
-    callback
-      { error: toMaybe err
-      , stdout: stdout'
-      , stderr: stderr'
-      }
-
-foreign import execFileImpl
-  :: String
-  -> Array String
-  -> ActualExecOptions
-  -> (Nullable Exception.Error -> Buffer -> Buffer -> Effect Unit)
-  -> Effect ChildProcess
-
-foreign import data ActualExecOptions :: Type
-
-convertExecOptions :: ExecOptions -> ActualExecOptions
-convertExecOptions opts = unsafeCoerce
-  { cwd: fromMaybe undefined opts.cwd
-  , env: fromMaybe undefined opts.env
-  , encoding: maybe undefined encodingToNode opts.encoding
-  , shell: fromMaybe undefined opts.shell
-  , timeout: fromMaybe undefined opts.timeout
-  , maxBuffer: fromMaybe undefined opts.maxBuffer
-  , killSignal: fromMaybe undefined opts.killSignal
-  , uid: fromMaybe undefined opts.uid
-  , gid: fromMaybe undefined opts.gid
-  }
-
--- | Configuration of `exec`. Fields set to `Nothing`
--- | will use the node defaults.
-type ExecOptions =
-  { cwd :: Maybe String
-  , env :: Maybe (Object String)
-  , encoding :: Maybe Encoding
-  , shell :: Maybe String
-  , timeout :: Maybe Number
-  , maxBuffer :: Maybe Int
-  , killSignal :: Maybe Signal
-  , uid :: Maybe Uid
-  , gid :: Maybe Gid
-  }
-
--- | A default set of `ExecOptions`. Everything is set to `Nothing`.
-defaultExecOptions :: ExecOptions
-defaultExecOptions =
-  { cwd: Nothing
-  , env: Nothing
-  , encoding: Nothing
-  , shell: Nothing
-  , timeout: Nothing
-  , maxBuffer: Nothing
-  , killSignal: Nothing
-  , uid: Nothing
-  , gid: Nothing
-  }
-
--- | The combined output of a process calld with `exec`.
-type ExecResult =
-  { stderr :: Buffer
-  , stdout :: Buffer
-  , error :: Maybe Exception.Error
-  }
-
--- | Generally identical to `exec`, with the exception that
--- | the method will not return until the child process has fully closed.
--- | Returns: The stdout from the command.
-execSync
-  :: String
-  -> ExecSyncOptions
-  -> Effect Buffer
-execSync cmd opts =
-  execSyncImpl cmd (convertExecSyncOptions opts)
-
-foreign import execSyncImpl
-  :: String
-  -> ActualExecSyncOptions
-  -> Effect Buffer
-
--- | Generally identical to `execFile`, with the exception that
--- | the method will not return until the child process has fully closed.
--- | Returns: The stdout from the command.
-execFileSync
-  :: String
-  -> Array String
-  -> ExecSyncOptions
-  -> Effect Buffer
-execFileSync cmd args opts =
-  execFileSyncImpl cmd args (convertExecSyncOptions opts)
-
-foreign import execFileSyncImpl
-  :: String
-  -> Array String
-  -> ActualExecSyncOptions
-  -> Effect Buffer
-
-foreign import data ActualExecSyncOptions :: Type
-
-convertExecSyncOptions :: ExecSyncOptions -> ActualExecSyncOptions
-convertExecSyncOptions opts = unsafeCoerce
-  { cwd: fromMaybe undefined opts.cwd
-  , input: fromMaybe undefined opts.input
-  , stdio: toActualStdIOOptions opts.stdio
-  , env: fromMaybe undefined opts.env
-  , timeout: fromMaybe undefined opts.timeout
-  , maxBuffer: fromMaybe undefined opts.maxBuffer
-  , killSignal: fromMaybe undefined opts.killSignal
-  , uid: fromMaybe undefined opts.uid
-  , gid: fromMaybe undefined opts.gid
-  }
-
-type ExecSyncOptions =
-  { cwd :: Maybe String
-  , input :: Maybe String
-  , stdio :: Array (Maybe StdIOBehaviour)
-  , env :: Maybe (Object String)
-  , timeout :: Maybe Number
-  , maxBuffer :: Maybe Int
-  , killSignal :: Maybe Signal
-  , uid :: Maybe Uid
-  , gid :: Maybe Gid
-  }
-
-defaultExecSyncOptions :: ExecSyncOptions
-defaultExecSyncOptions =
-  { cwd: Nothing
-  , input: Nothing
-  , stdio: pipe
-  , env: Nothing
-  , timeout: Nothing
-  , maxBuffer: Nothing
-  , killSignal: Nothing
-  , uid: Nothing
-  , gid: Nothing
-  }
+execFile' cmd args buildOpts cb = coerce $ UnsafeCP.execFileOptsCb cmd args opts \err sout serr ->
+  cb { stdout: unsafeSOBToBuffer sout, stderr: unsafeSOBToBuffer serr, error: err }
+  where
+  opts =
+    { cwd: fromMaybe undefined o.cwd
+    , env: fromMaybe undefined o.env
+    , encoding: "buffer"
+    , timeout: fromMaybe undefined o.timeout
+    , maxBuffer: fromMaybe undefined o.maxBuffer
+    , killSignal: fromMaybe undefined o.killSignal
+    , uid: fromMaybe undefined o.uid
+    , gid: fromMaybe undefined o.gid
+    , windowsHide: fromMaybe undefined o.windowsHide
+    , windowsVerbatimArguments: fromMaybe undefined o.windowsVerbatimArguments
+    , shell: fromMaybe undefined o.shell
+    }
+  o = buildOpts
+    { cwd: Nothing
+    , env: Nothing
+    , timeout: Nothing
+    , maxBuffer: Nothing
+    , killSignal: Nothing
+    , uid: Nothing
+    , gid: Nothing
+    , windowsHide: Nothing
+    , windowsVerbatimArguments: Nothing
+    , shell: Nothing
+    }
 
 -- | A special case of `spawn` for creating Node.js child processes. The first
 -- | argument is the module to be run, and the second is the argv (command line
 -- | arguments).
-foreign import fork
+fork
   :: String
   -> Array String
   -> Effect ChildProcess
+fork modulePath args = coerce $ UnsafeCP.fork' modulePath args { stdio: safeStdio }
 
--- | Behaviour for standard IO streams (eg, standard input, standard output) of
--- | a child process.
--- |
--- | * `Pipe`: creates a pipe between the child and parent process, which can
--- |   then be accessed as a `Stream` via the `stdin`, `stdout`, or `stderr`
--- |   functions.
--- | * `Ignore`: ignore this stream. This will cause Node to open /dev/null and
--- |   connect it to the stream.
--- | * `ShareStream`: Connect the supplied stream to the corresponding file
--- |    descriptor in the child.
--- | * `ShareFD`: Connect the supplied file descriptor (which should be open
--- |   in the parent) to the corresponding file descriptor in the child.
-data StdIOBehaviour
-  = Pipe
-  | Ignore
-  | ShareStream (forall r. Stream r)
-  | ShareFD FS.FileDescriptor
+-- | - `cwd` <string> | <URL> Current working directory of the child process.
+-- | - `detached` <boolean> Prepare child to run independently of its parent process. Specific behavior depends on the platform, see options.detached).
+-- | - `env` <Object> Environment key-value pairs. Default: process.env.
+-- | - `execPath` <string> Executable used to create the child process.
+-- | - `execArgv` <string[]> List of string arguments passed to the executable. Default: process.execArgv.
+-- | - `gid` <number> Sets the group identity of the process (see setgid(2)).
+-- | - `serialization` <string> Specify the kind of serialization used for sending messages between processes. Possible values are 'json' and 'advanced'. See Advanced serialization for more details. Default: 'json'.
+-- | - `signal` <AbortSignal> Allows closing the child process using an AbortSignal.
+-- | - `killSignal` <string> | <integer> The signal value to be used when the spawned process will be killed by timeout or abort signal. Default: 'SIGTERM'.
+-- | - `silent` <boolean> If true, stdin, stdout, and stderr of the child will be piped to the parent, otherwise they will be inherited from the parent, see the 'pipe' and 'inherit' options for child_process.spawn()'s stdio for more details. Default: false.
+-- | - `uid` <number> Sets the user identity of the process (see setuid(2)).
+-- | - `windowsVerbatimArguments` <boolean> No quoting or escaping of arguments is done on Windows. Ignored on Unix. Default: false.
+-- | - `timeout` <number> In milliseconds the maximum amount of time the process is allowed to run. Default: undefined.
+type ForkOptions =
+  { cwd :: Maybe String
+  , detached :: Maybe Boolean
+  , appendStdio :: Maybe (Array StdIO)
+  , env :: Maybe (Object String)
+  , execPath :: Maybe String
+  , execArgv :: Maybe (Array String)
+  , gid :: Maybe Gid
+  , serialization :: Maybe String
+  , killSignal :: Maybe KillSignal
+  , silent :: Maybe Boolean
+  , uid :: Maybe Uid
+  , windowsVerbatimArguments :: Maybe Boolean
+  , timeout :: Maybe Milliseconds
+  }
 
--- | Create pipes for each of the three standard IO streams.
-pipe :: Array (Maybe StdIOBehaviour)
-pipe = map Just [ Pipe, Pipe, Pipe ]
-
--- | Share `stdin` with `stdin`, `stdout` with `stdout`,
--- | and `stderr` with `stderr`.
-inherit :: Array (Maybe StdIOBehaviour)
-inherit = map Just
-  [ ShareStream process.stdin
-  , ShareStream process.stdout
-  , ShareStream process.stderr
-  ]
-
-foreign import process :: forall props. { | props }
-
--- | Ignore all streams.
-ignore :: Array (Maybe StdIOBehaviour)
-ignore = map Just [ Ignore, Ignore, Ignore ]
-
--- Helpers
-
-foreign import data ActualStdIOBehaviour :: Type
-
-toActualStdIOBehaviour :: StdIOBehaviour -> ActualStdIOBehaviour
-toActualStdIOBehaviour b = case b of
-  Pipe -> c "pipe"
-  Ignore -> c "ignore"
-  ShareFD x -> c x
-  ShareStream stream -> c stream
+fork'
+  :: String
+  -> Array String
+  -> (ForkOptions -> ForkOptions)
+  -> Effect ChildProcess
+fork' modulePath args buildOpts = coerce $ UnsafeCP.fork' modulePath args opts
   where
-  c :: forall a. a -> ActualStdIOBehaviour
-  c = unsafeCoerce
+  opts =
+    { stdio: maybe safeStdio (\rest -> safeStdio <> rest) o.appendStdio
+    , cwd: fromMaybe undefined o.cwd
+    , detached: fromMaybe undefined o.detached
+    , env: fromMaybe undefined o.env
+    , execPath: fromMaybe undefined o.execPath
+    , execArgv: fromMaybe undefined o.execArgv
+    , gid: fromMaybe undefined o.gid
+    , serialization: fromMaybe undefined o.serialization
+    , killSignal: fromMaybe undefined o.killSignal
+    , silent: fromMaybe undefined o.silent
+    , uid: fromMaybe undefined o.uid
+    , windowsVerbatimArguments: fromMaybe undefined o.windowsVerbatimArguments
+    , timeout: fromMaybe undefined o.timeout
+    }
+  o = buildOpts
+    { cwd: Nothing
+    , detached: Nothing
+    , appendStdio: Nothing
+    , env: Nothing
+    , execPath: Nothing
+    , execArgv: Nothing
+    , gid: Nothing
+    , serialization: Nothing
+    , killSignal: Nothing
+    , silent: Nothing
+    , uid: Nothing
+    , windowsVerbatimArguments: Nothing
+    , timeout: Nothing
+    }
 
-type ActualStdIOOptions = Array (Nullable ActualStdIOBehaviour)
+-- | Send messages to the (`nodejs`) child process.
+-- |
+-- | See the [node documentation](https://nodejs.org/api/child_process.html#child_process_subprocess_send_message_sendhandle_options_callback)
+-- | for in-depth documentation.
+send
+  :: forall props
+   . { | props }
+  -> Maybe Handle
+  -> ChildProcess
+  -> Effect Boolean
+send msg handle cp = UnsafeCP.unsafeSend msg (toNullable handle) (coerce cp)
 
-toActualStdIOOptions :: Array (Maybe StdIOBehaviour) -> ActualStdIOOptions
-toActualStdIOOptions = map (toNullable <<< map toActualStdIOBehaviour)
+-- | - `keepAlive` <boolean> A value that can be used when passing instances of `net.Socket` as the `Handle`. When true, the socket is kept open in the sending process. Default: false.
+type SendOptions =
+  { keepAlive :: Maybe Boolean
+  }
+
+send'
+  :: forall props
+   . { | props }
+  -> Maybe Handle
+  -> (SendOptions -> SendOptions)
+  -> (Maybe Error -> Effect Unit)
+  -> ChildProcess
+  -> Effect Boolean
+send' msg handle buildOpts cb cp =
+  UnsafeCP.unsafeSendOptsCb msg (toNullable handle) opts cb (coerce cp)
+  where
+  opts =
+    { keepAlive: fromMaybe undefined o.keepAlive }
+  o = buildOpts
+    { keepAlive: Nothing
+    }
+
+-- Unfortunately, there's not  be a better way...
+foreign import undefined :: forall a. a

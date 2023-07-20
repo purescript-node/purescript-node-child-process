@@ -1,0 +1,10 @@
+export const connectedImpl = (cp) => cp.connected;
+export const disconnectImpl = (cp) => cp.disconnect();
+export const exitCodeImpl = (cp) => cp.exitCode;
+export const pidImpl = (cp) => cp.pid;
+export const killImpl = (cp) => cp.kill();
+export const killStrImpl = (cp, str) => cp.kill(str);
+export const killedImpl = (cp) => cp.killed;
+export const signalCodeImpl = (cp) => cp.signalCode;
+export const spawnArgs = (cp) => cp.spawnArgs;
+export const spawnFile = (cp) => cp.spawnFile;
