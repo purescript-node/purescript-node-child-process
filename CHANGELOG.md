@@ -45,7 +45,7 @@ Breaking changes:
 - Restrict end-user's ability to configure `stdio` to only those appended to `safeStdio` (#46 by @JordanMartinez)
 
   See the module docs for `Node.ChildProcess`.
-- All `ChildProcess`-creating functions have been updated to support no args and all args variants (#46 by @JordanMartinez)
+- All `ChildProcess`-creating functions have been updated to support no args and all args variants (#46, #48 by @JordanMartinez)
 
 New features:
 - Added event handler for `spawn` event (#43 by @JordanMartinez)

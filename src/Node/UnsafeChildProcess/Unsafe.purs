@@ -145,7 +145,7 @@ type JsExecOptions =
   ( cwd :: String
   , env :: Object String
   , encoding :: String
-  , timeout :: Number
+  , timeout :: Milliseconds
   , maxBuffer :: Number
   , killSignal :: KillSignal
   , uid :: Uid
@@ -245,7 +245,7 @@ type JsExecFileOptions =
   ( cwd :: String
   , env :: Object String
   , encoding :: String
-  , timeout :: Number
+  , timeout :: Milliseconds
   , maxBuffer :: Number
   , killSignal :: KillSignal
   , uid :: Uid
@@ -372,7 +372,7 @@ type JsSpawnOptions =
   , shell :: Shell
   , windowsVerbatimArguments :: Boolean
   , windowsHide :: Boolean
-  , timeout :: Number
+  , timeout :: Milliseconds
   , killSignal :: KillSignal
   )
 
