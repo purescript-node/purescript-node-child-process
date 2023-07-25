@@ -36,7 +36,7 @@ import Data.Posix.Signal as Signal
 import Effect (Effect)
 import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, mkEffectFn2, runEffectFn1, runEffectFn2)
 import Foreign (Foreign)
-import Node.ChildProcess.Types (Exit(..), Handle, KillSignal, StdIO, UnsafeChildProcess, intSignal, ipc, pipe, stringSignal)
+import Node.ChildProcess.Types (Exit(..), Handle, KillSignal, StdIO, UnsafeChildProcess, ipc, pipe, stringSignal)
 import Node.Errors.SystemError (SystemError)
 import Node.EventEmitter (EventEmitter, EventHandle(..))
 import Node.EventEmitter.UtilTypes (EventHandle0, EventHandle1)
