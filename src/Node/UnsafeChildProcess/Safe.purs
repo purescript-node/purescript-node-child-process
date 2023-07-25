@@ -23,8 +23,8 @@ module Node.UnsafeChildProcess.Safe
   , signalCode
   , spawnFile
   , spawnArgs
+  , stdio
   , safeStdio
-
   ) where
 
 import Prelude
@@ -37,6 +37,7 @@ import Data.Posix.Signal as Signal
 import Effect (Effect)
 import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, mkEffectFn2, runEffectFn1, runEffectFn2)
 import Foreign (Foreign)
+import Node.ChildProcess (ChildProcess)
 import Node.ChildProcess.Types (Exit(..), Handle, KillSignal, StdIO, UnsafeChildProcess, intSignal, ipc, pipe, stringSignal)
 import Node.Errors.SystemError (SystemError)
 import Node.EventEmitter (EventEmitter, EventHandle(..))
@@ -147,6 +148,11 @@ foreign import signalCodeImpl :: EffectFn1 (UnsafeChildProcess) (Nullable String
 foreign import spawnArgs :: UnsafeChildProcess -> Array String
 
 foreign import spawnFile :: UnsafeChildProcess -> String
+
+stdio :: ChildProcess -> Array StdIO
+stdio cp = runFn1 stdioImpl cp
+
+foreign import stdioImpl :: Fn1 (ChildProcess) (Array StdIO)
 
 -- | Safe default configuration for an UnsafeChildProcess.
 -- | `[ pipe, pipe, pipe, ipc ]`.
