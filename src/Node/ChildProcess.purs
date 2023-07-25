@@ -34,6 +34,7 @@
 module Node.ChildProcess
   ( ChildProcess
   , toEventEmitter
+  , toUnsafeChildProcess
   , closeH
   , disconnectH
   , errorH
