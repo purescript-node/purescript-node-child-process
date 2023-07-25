@@ -10,6 +10,7 @@ module Node.UnsafeChildProcess.Safe
   , messageH
   , spawnH
   , pid
+  , pidExists
   , connected
   , disconnect
   , exitCode
@@ -36,7 +37,7 @@ import Data.Posix.Signal as Signal
 import Effect (Effect)
 import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, mkEffectFn2, runEffectFn1, runEffectFn2)
 import Foreign (Foreign)
-import Node.ChildProcess.Types (Exit(..), Handle, KillSignal, StdIO, UnsafeChildProcess, ipc, pipe, stringSignal)
+import Node.ChildProcess.Types (Exit(..), Handle, KillSignal, StdIO, UnsafeChildProcess, intSignal, ipc, pipe, stringSignal)
 import Node.Errors.SystemError (SystemError)
 import Node.EventEmitter (EventEmitter, EventHandle(..))
 import Node.EventEmitter.UtilTypes (EventHandle0, EventHandle1)
@@ -78,6 +79,9 @@ pid :: UnsafeChildProcess -> Effect (Maybe Pid)
 pid cp = map toMaybe $ runEffectFn1 pidImpl cp
 
 foreign import pidImpl :: EffectFn1 (UnsafeChildProcess) (Nullable Pid)
+
+pidExists :: UnsafeChildProcess -> Effect Boolean
+pidExists cp = kill' (intSignal 0) cp
 
 -- | Indicates whether it is still possible to send and receive
 -- | messages from the child process.

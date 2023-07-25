@@ -24,6 +24,7 @@ Breaking changes:
 
 New features:
 - Added `fromKillSignal` (#51 by @JordanMartinez)
+- Added `pidExists` (#52 by @JordanMartinez)
 
 Other improvements:
 - Fix regression: add `ref`/`unref` APIs that were dropped in `v10.0.0` (#50 by @JordanMartinez)

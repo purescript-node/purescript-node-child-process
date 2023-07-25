@@ -44,6 +44,7 @@ module Node.ChildProcess
   , stdout
   , stderr
   , pid
+  , pidExists
   , connected
   , disconnect
   , exitCode
@@ -157,6 +158,9 @@ stderr = toUnsafeChildProcess >>> UnsafeCP.unsafeStderr >>> unsafeFromNull
 -- | exited, another process may have taken the same ID, so be careful!
 pid :: ChildProcess -> Effect (Maybe Pid)
 pid = unsafeCoerce SafeCP.pid
+
+pidExists :: ChildProcess -> Effect Boolean
+pidExists = unsafeCoerce SafeCP.pidExists
 
 -- | Indicates whether it is still possible to send and receive
 -- | messages from the child process.
