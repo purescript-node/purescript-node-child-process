@@ -157,10 +157,10 @@ stderr = toUnsafeChildProcess >>> UnsafeCP.unsafeStderr >>> unsafeFromNull
 -- | the process has spawned. Note that if the process has already
 -- | exited, another process may have taken the same ID, so be careful!
 pid :: ChildProcess -> Effect (Maybe Pid)
-pid = unsafeCoerce SafeCP.pid
+pid cp = SafeCP.pid $ toUnsafeChildProcess cp
 
 pidExists :: ChildProcess -> Effect Boolean
-pidExists = unsafeCoerce SafeCP.pidExists
+pidExists cp = SafeCP.pidExists $ toUnsafeChildProcess cp
 
 -- | Indicates whether it is still possible to send and receive
 -- | messages from the child process.
@@ -168,17 +168,17 @@ connected :: ChildProcess -> Effect Boolean
 connected = unsafeCoerce SafeCP.connected
 
 exitCode :: ChildProcess -> Effect (Maybe Int)
-exitCode = unsafeCoerce SafeCP.exitCode
+exitCode cp = SafeCP.exitCode $ toUnsafeChildProcess cp
 
 -- | Closes the IPC channel between parent and child.
 disconnect :: ChildProcess -> Effect Unit
-disconnect = unsafeCoerce SafeCP.disconnect
+disconnect cp = SafeCP.disconnect $ toUnsafeChildProcess cp
 
 kill :: ChildProcess -> Effect Boolean
-kill = unsafeCoerce SafeCP.kill
+kill cp = SafeCP.kill $ toUnsafeChildProcess cp
 
 kill' :: KillSignal -> ChildProcess -> Effect Boolean
-kill' = unsafeCoerce SafeCP.kill'
+kill' sig cp = SafeCP.kill' sig $ toUnsafeChildProcess cp
 
 -- | Send a signal to a child process. In the same way as the
 -- | [unix kill(2) system call](https://linux.die.net/man/2/kill),
@@ -189,25 +189,25 @@ kill' = unsafeCoerce SafeCP.kill'
 -- | The child process might emit an `"error"` event if the signal
 -- | could not be delivered.
 killSignal :: Signal -> ChildProcess -> Effect Boolean
-killSignal = unsafeCoerce SafeCP.killSignal
+killSignal sig cp = SafeCP.killSignal sig $ toUnsafeChildProcess cp
 
 killed :: ChildProcess -> Effect Boolean
-killed = unsafeCoerce SafeCP.killed
+killed cp = SafeCP.killed $ toUnsafeChildProcess cp
 
 ref :: ChildProcess -> Effect Unit
-ref = unsafeCoerce SafeCP.ref
+ref cp = SafeCP.ref $ toUnsafeChildProcess cp
 
 unref :: ChildProcess -> Effect Unit
-unref = unsafeCoerce SafeCP.unref
+unref cp = SafeCP.unref $ toUnsafeChildProcess cp
 
 signalCode :: ChildProcess -> Effect (Maybe String)
-signalCode = unsafeCoerce SafeCP.signalCode
+signalCode cp = SafeCP.signalCode $ toUnsafeChildProcess cp
 
 spawnArgs :: ChildProcess -> Array String
-spawnArgs = unsafeCoerce SafeCP.spawnArgs
+spawnArgs cp = SafeCP.spawnArgs $ toUnsafeChildProcess cp
 
 spawnFile :: ChildProcess -> String
-spawnFile = unsafeCoerce SafeCP.spawnFile
+spawnFile cp = SafeCP.spawnFile $ toUnsafeChildProcess cp
 
 -- | Note: `exitStatus` combines the `status` and `signal` fields
 -- | from the value normally returned by `spawnSync` into one value
