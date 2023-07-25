@@ -15,11 +15,12 @@ Other improvements:
 ## [v11.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v11.0.0) - 2023-07-25
 
 Breaking changes:
-- Update the signal arg from `String` to `KillSignal` (#51 by @JordanMartinez)
+- Update the signal arg from `String` to `KillSignal` (#51, #52 by @JordanMartinez)
 
   - `Exit`'s `BySignal` constructor's arg
   - `exitH`/`closeH`'s signal arg
   - `spawnSync`'s `SpawnResult`'s `signal` field
+  - `kill'`'s signal arg
 
 New features:
 - Added `fromKillSignal` (#51 by @JordanMartinez)
