@@ -1,3 +1,5 @@
+export const showKillSignal = (ks) => ks + "";
+export const showShell = (shell) => shell + "";
 export const fromKillSignalImpl = (left, right, sig) => {
   const ty = typeof sig;
   if (ty === "number") return right(sig | 0);
