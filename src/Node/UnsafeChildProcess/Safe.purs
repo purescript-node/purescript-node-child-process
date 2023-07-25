@@ -80,6 +80,8 @@ pid cp = map toMaybe $ runEffectFn1 pidImpl cp
 
 foreign import pidImpl :: EffectFn1 (UnsafeChildProcess) (Nullable Pid)
 
+-- | Note: this will not work if the user does not have permission to kill
+-- | a `PID`. Uses `cp.kill(0)` underneath.
 pidExists :: UnsafeChildProcess -> Effect Boolean
 pidExists cp = kill' (intSignal 0) cp
 
