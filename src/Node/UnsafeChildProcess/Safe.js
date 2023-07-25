@@ -10,4 +10,4 @@ export const unrefImpl = (cp) => cp.unref();
 export const signalCodeImpl = (cp) => cp.signalCode;
 export const spawnArgs = (cp) => cp.spawnArgs;
 export const spawnFile = (cp) => cp.spawnFile;
-export const stdioImpl = (cp) => cp.stdio;
+export const stdio = (cp) => cp.stdio;
