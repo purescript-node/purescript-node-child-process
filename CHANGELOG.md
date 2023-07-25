@@ -15,7 +15,7 @@ Other improvements:
 ## [v10.1.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v10.1.0) - 2023-07-25
 
 Other improvements:
-- Fix regression: add `ref`/`unref` APIs that were dropped in `v10.0.0` ()
+- Fix regression: add `ref`/`unref` APIs that were dropped in `v10.0.0` (#50 by @JordanMartinez)
 
 ## [v10.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v10.0.0) - 2023-07-20
 
