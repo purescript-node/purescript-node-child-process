@@ -23,8 +23,8 @@ module Node.UnsafeChildProcess.Safe
   , signalCode
   , spawnFile
   , spawnArgs
+  , stdio
   , safeStdio
-
   ) where
 
 import Prelude
@@ -147,6 +147,8 @@ foreign import signalCodeImpl :: EffectFn1 (UnsafeChildProcess) (Nullable String
 foreign import spawnArgs :: UnsafeChildProcess -> Array String
 
 foreign import spawnFile :: UnsafeChildProcess -> String
+
+foreign import stdio :: UnsafeChildProcess -> Array StdIO
 
 -- | Safe default configuration for an UnsafeChildProcess.
 -- | `[ pipe, pipe, pipe, ipc ]`.

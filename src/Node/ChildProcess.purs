@@ -58,6 +58,7 @@ module Node.ChildProcess
   , signalCode
   , spawnFile
   , spawnArgs
+  , stdio
   , spawnSync
   , SpawnSyncOptions
   , spawnSync'
@@ -209,6 +210,9 @@ spawnArgs cp = SafeCP.spawnArgs $ toUnsafeChildProcess cp
 
 spawnFile :: ChildProcess -> String
 spawnFile cp = SafeCP.spawnFile $ toUnsafeChildProcess cp
+
+stdio :: ChildProcess -> Array StdIO
+stdio cp = SafeCP.stdio $ toUnsafeChildProcess cp
 
 -- | Note: `exitStatus` combines the `status` and `signal` fields
 -- | from the value normally returned by `spawnSync` into one value
