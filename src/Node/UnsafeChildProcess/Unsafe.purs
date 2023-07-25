@@ -290,7 +290,7 @@ type JsSpawnSyncResult =
   , stdout :: StringOrBuffer
   , stderr :: StringOrBuffer
   , status :: Nullable Int
-  , signal :: Nullable String
+  , signal :: Nullable KillSignal
   , error :: Nullable SystemError
   }
 

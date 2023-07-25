@@ -1,7 +1,31 @@
-module Node.ChildProcess.Types where
+module Node.ChildProcess.Types
+  ( UnsafeChildProcess
+  , Handle
+  , StdIO
+  , pipe
+  , ignore
+  , overlapped
+  , ipc
+  , inherit
+  , shareStream
+  , fileDescriptor
+  , fileDescriptor'
+  , defaultStdIO
+  , KillSignal
+  , intSignal
+  , stringSignal
+  , fromKillSignal
+  , Shell
+  , enableShell
+  , customShell
+  , StringOrBuffer
+  , Exit(..)
+  ) where
 
 import Prelude
 
+import Data.Either (Either(..), either)
+import Data.Function.Uncurried (Fn3, runFn3)
 import Data.Nullable (Nullable, null)
 import Node.FS (FileDescriptor)
 import Node.Stream (Stream)
@@ -54,6 +78,11 @@ intSignal = unsafeCoerce
 stringSignal :: String -> KillSignal
 stringSignal = unsafeCoerce
 
+fromKillSignal :: KillSignal -> Either Int String
+fromKillSignal sig = runFn3 fromKillSignalImpl Left Right sig
+
+foreign import fromKillSignalImpl :: Fn3 (forall l r. l -> Either l r) (forall l r. r -> Either l r) (KillSignal) (Either Int String)
+
 foreign import data Shell :: Type
 
 enableShell :: Shell
@@ -70,8 +99,8 @@ foreign import data StringOrBuffer :: Type
 -- | due to a signal.
 data Exit
   = Normally Int
-  | BySignal String
+  | BySignal KillSignal
 
 instance showExit :: Show Exit where
   show (Normally x) = "Normally " <> show x
-  show (BySignal sig) = "BySignal " <> show sig
+  show (BySignal sig) = "BySignal " <> (either show show $ fromKillSignal sig)

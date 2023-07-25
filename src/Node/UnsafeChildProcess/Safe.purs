@@ -36,7 +36,7 @@ import Data.Posix.Signal as Signal
 import Effect (Effect)
 import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, mkEffectFn2, runEffectFn1, runEffectFn2)
 import Foreign (Foreign)
-import Node.ChildProcess.Types (Exit(..), Handle, StdIO, UnsafeChildProcess, ipc, pipe)
+import Node.ChildProcess.Types (Exit(..), Handle, KillSignal, StdIO, UnsafeChildProcess, ipc, pipe)
 import Node.Errors.SystemError (SystemError)
 import Node.EventEmitter (EventEmitter, EventHandle(..))
 import Node.EventEmitter.UtilTypes (EventHandle0, EventHandle1)
@@ -46,12 +46,12 @@ import Unsafe.Coerce (unsafeCoerce)
 toEventEmitter :: UnsafeChildProcess -> EventEmitter
 toEventEmitter = unsafeCoerce
 
-closeH :: EventHandle UnsafeChildProcess (Exit -> Effect Unit) (EffectFn2 (Nullable Int) (Nullable String) Unit)
+closeH :: EventHandle UnsafeChildProcess (Exit -> Effect Unit) (EffectFn2 (Nullable Int) (Nullable KillSignal) Unit)
 closeH = EventHandle "close" \cb -> mkEffectFn2 \code signal ->
   case toMaybe code, toMaybe signal of
     Just c, _ -> cb $ Normally c
     _, Just s -> cb $ BySignal s
-    _, _ -> unsafeCrashWith $ "Impossible. 'close' event did not get an exit code or kill signal: " <> show code <> "; " <> show signal
+    _, _ -> unsafeCrashWith $ "Impossible. 'close' event did not get an exit code or kill signal: " <> show code <> "; " <> (unsafeCoerce signal)
 
 disconnectH :: EventHandle0 UnsafeChildProcess
 disconnectH = EventHandle "disconnect" identity
@@ -59,12 +59,12 @@ disconnectH = EventHandle "disconnect" identity
 errorH :: EventHandle1 UnsafeChildProcess SystemError
 errorH = EventHandle "error" mkEffectFn1
 
-exitH :: EventHandle UnsafeChildProcess (Exit -> Effect Unit) (EffectFn2 (Nullable Int) (Nullable String) Unit)
+exitH :: EventHandle UnsafeChildProcess (Exit -> Effect Unit) (EffectFn2 (Nullable Int) (Nullable KillSignal) Unit)
 exitH = EventHandle "exitH" \cb -> mkEffectFn2 \code signal ->
   case toMaybe code, toMaybe signal of
     Just c, _ -> cb $ Normally c
     _, Just s -> cb $ BySignal s
-    _, _ -> unsafeCrashWith $ "Impossible. 'exit' event did not get an exit code or kill signal: " <> show code <> "; " <> show signal
+    _, _ -> unsafeCrashWith $ "Impossible. 'exit' event did not get an exit code or kill signal: " <> show code <> "; " <> (unsafeCoerce signal)
 
 messageH :: EventHandle UnsafeChildProcess (Foreign -> Maybe Handle -> Effect Unit) (EffectFn2 Foreign (Nullable Handle) Unit)
 messageH = EventHandle "message" \cb -> mkEffectFn2 \a b -> cb a $ toMaybe b
