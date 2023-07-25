@@ -51,6 +51,8 @@ module Node.ChildProcess
   , kill'
   , killSignal
   , killed
+  , ref
+  , unref
   , signalCode
   , spawnFile
   , spawnArgs
@@ -187,6 +189,12 @@ killSignal = unsafeCoerce SafeCP.killSignal
 
 killed :: ChildProcess -> Effect Boolean
 killed = unsafeCoerce SafeCP.killed
+
+ref :: ChildProcess -> Effect Unit
+ref = unsafeCoerce SafeCP.ref
+
+unref :: ChildProcess -> Effect Unit
+unref = unsafeCoerce SafeCP.unref
 
 signalCode :: ChildProcess -> Effect (Maybe String)
 signalCode = unsafeCoerce SafeCP.signalCode
