@@ -72,6 +72,9 @@ defaultStdIO = unsafeCoerce (null :: Nullable String)
 
 foreign import data KillSignal :: Type
 
+instance Show KillSignal where
+  show x = "KillSignal(" <> unsafeCoerce x <> ")"
+
 intSignal :: Int -> KillSignal
 intSignal = unsafeCoerce
 
@@ -84,6 +87,9 @@ fromKillSignal sig = runFn3 fromKillSignalImpl Left Right sig
 foreign import fromKillSignalImpl :: Fn3 (forall l r. l -> Either l r) (forall l r. r -> Either l r) (KillSignal) (Either Int String)
 
 foreign import data Shell :: Type
+
+instance Show Shell where
+  show x = "Shell(" <> unsafeCoerce x <> ")"
 
 enableShell :: Shell
 enableShell = unsafeCoerce true
