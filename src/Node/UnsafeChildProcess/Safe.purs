@@ -36,7 +36,7 @@ import Data.Posix.Signal as Signal
 import Effect (Effect)
 import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, mkEffectFn2, runEffectFn1, runEffectFn2)
 import Foreign (Foreign)
-import Node.ChildProcess.Types (Exit(..), Handle, KillSignal, StdIO, UnsafeChildProcess, ipc, pipe)
+import Node.ChildProcess.Types (Exit(..), Handle, KillSignal, StdIO, UnsafeChildProcess, ipc, pipe, stringSignal)
 import Node.Errors.SystemError (SystemError)
 import Node.EventEmitter (EventEmitter, EventHandle(..))
 import Node.EventEmitter.UtilTypes (EventHandle0, EventHandle1)
@@ -102,10 +102,10 @@ kill cp = runEffectFn1 killImpl cp
 
 foreign import killImpl :: EffectFn1 (UnsafeChildProcess) (Boolean)
 
-kill' :: String -> UnsafeChildProcess -> Effect Boolean
+kill' :: KillSignal -> UnsafeChildProcess -> Effect Boolean
 kill' sig cp = runEffectFn2 killStrImpl cp sig
 
-foreign import killStrImpl :: EffectFn2 (UnsafeChildProcess) (String) (Boolean)
+foreign import killStrImpl :: EffectFn2 (UnsafeChildProcess) (KillSignal) (Boolean)
 
 -- | Send a signal to a child process. In the same way as the
 -- | [unix kill(2) system call](https://linux.die.net/man/2/kill),
@@ -116,7 +116,7 @@ foreign import killStrImpl :: EffectFn2 (UnsafeChildProcess) (String) (Boolean)
 -- | The child process might emit an `"error"` event if the signal
 -- | could not be delivered.
 killSignal :: Signal -> UnsafeChildProcess -> Effect Boolean
-killSignal sig cp = kill' (Signal.toString sig) cp
+killSignal sig cp = kill' (stringSignal $ Signal.toString sig) cp
 
 killed :: UnsafeChildProcess -> Effect Boolean
 killed cp = runEffectFn1 killedImpl cp

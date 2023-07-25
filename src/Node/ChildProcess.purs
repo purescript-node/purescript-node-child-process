@@ -173,7 +173,7 @@ disconnect = unsafeCoerce SafeCP.disconnect
 kill :: ChildProcess -> Effect Boolean
 kill = unsafeCoerce SafeCP.kill
 
-kill' :: String -> ChildProcess -> Effect Boolean
+kill' :: KillSignal -> ChildProcess -> Effect Boolean
 kill' = unsafeCoerce SafeCP.kill'
 
 -- | Send a signal to a child process. In the same way as the
