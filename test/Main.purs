@@ -2,6 +2,7 @@ module Test.Main where
 
 import Prelude
 
+import Data.Either (hush)
 import Data.Maybe (Maybe(..))
 import Data.Posix.Signal (Signal(..))
 import Data.Posix.Signal as Signal
@@ -9,7 +10,7 @@ import Effect (Effect)
 import Effect.Console (log)
 import Node.Buffer as Buffer
 import Node.ChildProcess (errorH, exec', execSync', exitH, kill, spawn, stdout)
-import Node.ChildProcess.Types (Exit(..))
+import Node.ChildProcess.Types (Exit(..), fromKillSignal)
 import Node.Encoding (Encoding(..))
 import Node.Encoding as NE
 import Node.Errors.SystemError (code)
@@ -40,7 +41,7 @@ main = do
     _ <- kill ls
     ls # on_ exitH \exit ->
       case exit of
-        BySignal s | Just SIGTERM <- Signal.fromString s ->
+        BySignal s | Just SIGTERM <- Signal.fromString =<< (hush $ fromKillSignal s) ->
           log "All good!"
         _ -> do
           log ("Bad exit: expected `BySignal SIGTERM`, got: " <> show exit)
