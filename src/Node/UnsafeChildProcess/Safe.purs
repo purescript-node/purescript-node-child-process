@@ -17,10 +17,13 @@ module Node.UnsafeChildProcess.Safe
   , kill'
   , killSignal
   , killed
+  , ref
+  , unref
   , signalCode
   , spawnFile
   , spawnArgs
   , safeStdio
+
   ) where
 
 import Prelude
@@ -119,6 +122,16 @@ killed :: UnsafeChildProcess -> Effect Boolean
 killed cp = runEffectFn1 killedImpl cp
 
 foreign import killedImpl :: EffectFn1 (UnsafeChildProcess) (Boolean)
+
+ref :: UnsafeChildProcess -> Effect Unit
+ref cp = runEffectFn1 refImpl cp
+
+foreign import refImpl :: EffectFn1 (UnsafeChildProcess) (Unit)
+
+unref :: UnsafeChildProcess -> Effect Unit
+unref cp = runEffectFn1 unrefImpl cp
+
+foreign import unrefImpl :: EffectFn1 (UnsafeChildProcess) (Unit)
 
 signalCode :: UnsafeChildProcess -> Effect (Maybe String)
 signalCode cp = map toMaybe $ runEffectFn1 signalCodeImpl cp
