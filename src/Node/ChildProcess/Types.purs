@@ -24,7 +24,7 @@ module Node.ChildProcess.Types
 
 import Prelude
 
-import Data.Either (Either(..))
+import Data.Either (Either(..), either)
 import Data.Function.Uncurried (Fn3, runFn3)
 import Data.Nullable (Nullable, null)
 import Node.FS (FileDescriptor)
@@ -99,8 +99,8 @@ foreign import data StringOrBuffer :: Type
 -- | due to a signal.
 data Exit
   = Normally Int
-  | BySignal String
+  | BySignal KillSignal
 
 instance showExit :: Show Exit where
   show (Normally x) = "Normally " <> show x
-  show (BySignal sig) = "BySignal " <> show sig
+  show (BySignal sig) = "BySignal " <> (either show show $ fromKillSignal sig)
