@@ -61,7 +61,7 @@ errorH :: EventHandle1 UnsafeChildProcess SystemError
 errorH = EventHandle "error" mkEffectFn1
 
 exitH :: EventHandle UnsafeChildProcess (Exit -> Effect Unit) (EffectFn2 (Nullable Int) (Nullable KillSignal) Unit)
-exitH = EventHandle "exitH" \cb -> mkEffectFn2 \code signal ->
+exitH = EventHandle "exit" \cb -> mkEffectFn2 \code signal ->
   case toMaybe code, toMaybe signal of
     Just c, _ -> cb $ Normally c
     _, Just s -> cb $ BySignal s
