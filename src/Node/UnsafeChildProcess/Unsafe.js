@@ -10,6 +10,7 @@ export {
   spawn as spawnImpl, 
   spawn as spawnOptsImpl, 
   execSync as execSyncImpl,
+  execSync as execSyncOptsImpl,
   execFileSync as execFileSyncImpl,
   execFileSync as execFileSyncOptsImpl,
   spawnSync as spawnSyncImpl,
