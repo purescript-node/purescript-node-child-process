@@ -24,7 +24,6 @@ module Node.UnsafeChildProcess.Safe
   , spawnFile
   , spawnArgs
   , stdio
-  , safeStdio
   ) where
 
 import Prelude
@@ -37,7 +36,7 @@ import Data.Posix.Signal as Signal
 import Effect (Effect)
 import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, mkEffectFn2, runEffectFn1, runEffectFn2)
 import Foreign (Foreign)
-import Node.ChildProcess.Types (Exit(..), Handle, KillSignal, StdIO, UnsafeChildProcess, intSignal, ipc, pipe, stringSignal)
+import Node.ChildProcess.Types (Exit(..), Handle, KillSignal, StdIO, UnsafeChildProcess, intSignal, stringSignal)
 import Node.Errors.SystemError (SystemError)
 import Node.EventEmitter (EventEmitter, EventHandle(..))
 import Node.EventEmitter.UtilTypes (EventHandle0, EventHandle1)
@@ -61,7 +60,7 @@ errorH :: EventHandle1 UnsafeChildProcess SystemError
 errorH = EventHandle "error" mkEffectFn1
 
 exitH :: EventHandle UnsafeChildProcess (Exit -> Effect Unit) (EffectFn2 (Nullable Int) (Nullable KillSignal) Unit)
-exitH = EventHandle "exitH" \cb -> mkEffectFn2 \code signal ->
+exitH = EventHandle "exit" \cb -> mkEffectFn2 \code signal ->
   case toMaybe code, toMaybe signal of
     Just c, _ -> cb $ Normally c
     _, Just s -> cb $ BySignal s
@@ -149,10 +148,3 @@ foreign import spawnArgs :: UnsafeChildProcess -> Array String
 foreign import spawnFile :: UnsafeChildProcess -> String
 
 foreign import stdio :: UnsafeChildProcess -> Array StdIO
-
--- | Safe default configuration for an UnsafeChildProcess.
--- | `[ pipe, pipe, pipe, ipc ]`.
--- | Creates a new stream for `stdin`, `stdout`, and `stderr`
--- | Also adds an IPC channel, even if it's not used.
-safeStdio :: Array StdIO
-safeStdio = [ pipe, pipe, pipe, ipc ]

@@ -10,13 +10,14 @@ export {
   spawn as spawnImpl, 
   spawn as spawnOptsImpl, 
   execSync as execSyncImpl,
+  execSync as execSyncOptsImpl,
   execFileSync as execFileSyncImpl,
   execFileSync as execFileSyncOptsImpl,
   spawnSync as spawnSyncImpl,
   spawnSync as spawnSyncOptsImpl,
   fork as forkImpl,
   fork as forkOptsImpl,
-} from "child_process";
+} from "node:child_process";
 
 export const unsafeStdin = (cp) => cp.stdin;
 export const unsafeStdout = (cp) => cp.stdout;
