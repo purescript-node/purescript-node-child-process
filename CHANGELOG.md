@@ -24,6 +24,7 @@ Bugfixes:
 - Fixed `exitH`'s String value for listener (#60 by @JordanMartinez)
 - Added missing FFI for `execSync'` (#60 by @JordanMartinez)
 - Fixed `fromKillSignal`'s FFI's arg order (#60 by @JordanMartinez)
+- Update `node-streams` to `v9.0.0` to fix FFI issues (#61 by @JordanMartinez)
 
 Other improvements:
 - Update tests to actually throw if invalid state occurs (#60 by @JordanMartinez)
