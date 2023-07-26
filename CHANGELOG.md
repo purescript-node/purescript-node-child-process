@@ -12,6 +12,22 @@ Bugfixes:
 
 Other improvements:
 
+## [v12.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v12.0.0) - 2023-07-26
+
+Breaking changes:
+- Removed `safeStdio` (#60 by @JordanMartinez)
+
+  Turns out this isn't safe for `*Sync` functions. AFAIK, this isn't documented
+  in Node docs.
+
+Bugfixes:
+- Fixed `exitH`'s String value for listener (#60 by @JordanMartinez)
+- Added missing FFI for `execSync'` (#60 by @JordanMartinez)
+- Fixed `fromKillSignal`'s FFI's arg order (#60 by @JordanMartinez)
+
+Other improvements:
+- Update tests to actually throw if invalid state occurs (#60 by @JordanMartinez)
+
 ## [v11.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v11.0.0) - 2023-07-25
 
 Breaking changes:
