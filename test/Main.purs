@@ -10,18 +10,22 @@ import Effect (Effect)
 import Effect.Aff (Aff, effectCanceler, launchAff_, makeAff, nonCanceler)
 import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
+import Effect.Exception (throwException)
 import Node.Buffer as Buffer
-import Node.ChildProcess (exec', execSync', kill, spawn, stdout)
+import Node.ChildProcess (exec', execSync', kill, spawn, stdin, stdout)
 import Node.ChildProcess as CP
 import Node.ChildProcess.Types (Exit(..), fromKillSignal)
 import Node.Encoding (Encoding(..))
 import Node.Encoding as NE
 import Node.Errors.SystemError (code)
-import Node.EventEmitter (EventHandle, on_, once)
+import Node.EventEmitter (EventHandle, on_, once, once_)
 import Node.Stream (dataH)
+import Node.Stream as Stream
+import Unsafe.Coerce (unsafeCoerce)
 
 main :: Effect Unit
 main = launchAff_ do
+  writingToStdinWorks
   spawnLs
   nonExistentExecutable
   noEffectsTooEarly
@@ -38,6 +42,19 @@ until
 until ee event cb = makeAff \done -> do
   rm <- ee # once event (cb (done <<< Right))
   pure $ effectCanceler rm
+
+writingToStdinWorks :: Aff Unit
+writingToStdinWorks = do
+  log "\nwriting to stdin works"
+  sp <- liftEffect $ spawn "sh" [ "./sleep.sh" ]
+  liftEffect do
+    buf <- Buffer.fromString "helllo" UTF8
+    void $ Stream.write (stdin sp) buf
+    sp # once_ CP.errorH \err ->
+      throwException $ unsafeCoerce err
+  exit <- until sp CP.closeH \completeAff -> \exit ->
+    completeAff exit
+  log $ "spawn sleep done " <> show exit
 
 spawnLs :: Aff Unit
 spawnLs = do
