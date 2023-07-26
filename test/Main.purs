@@ -2,75 +2,95 @@ module Test.Main where
 
 import Prelude
 
-import Data.Either (hush)
+import Data.Either (Either(..), hush)
 import Data.Maybe (Maybe(..))
 import Data.Posix.Signal (Signal(..))
 import Data.Posix.Signal as Signal
 import Effect (Effect)
-import Effect.Console (log)
+import Effect.Aff (Aff, effectCanceler, launchAff_, makeAff, nonCanceler)
+import Effect.Class (liftEffect)
+import Effect.Class.Console (log)
 import Node.Buffer as Buffer
-import Node.ChildProcess (errorH, exec', execSync', exitH, kill, spawn, stdout)
+import Node.ChildProcess (exec', execSync', kill, spawn, stdout)
+import Node.ChildProcess as CP
 import Node.ChildProcess.Types (Exit(..), fromKillSignal)
 import Node.Encoding (Encoding(..))
 import Node.Encoding as NE
 import Node.Errors.SystemError (code)
-import Node.EventEmitter (on_)
+import Node.EventEmitter (EventHandle, on_, once)
 import Node.Stream (dataH)
 
 main :: Effect Unit
-main = do
-  log "spawns processes ok"
+main = launchAff_ do
   spawnLs
-
-  log "emits an error if executable does not exist"
-  nonExistentExecutable $ do
-    log "nonexistent executable: all good."
-
-  log "doesn't perform effects too early"
-  spawn "ls" [ "-la" ] >>= \ls -> do
-    let _ = kill ls
-    ls # on_ exitH \exit ->
-      case exit of
-        Normally 0 ->
-          log "All good!"
-        _ -> do
-          log ("Bad exit: expected `Normally 0`, got: " <> show exit)
-
-  log "kills processes"
-  spawn "ls" [ "-la" ] >>= \ls -> do
-    _ <- kill ls
-    ls # on_ exitH \exit ->
-      case exit of
-        BySignal s | Just SIGTERM <- Signal.fromString =<< (hush $ fromKillSignal s) ->
-          log "All good!"
-        _ -> do
-          log ("Bad exit: expected `BySignal SIGTERM`, got: " <> show exit)
-
-  log "exec"
+  nonExistentExecutable
+  noEffectsTooEarly
+  killsProcess
   execLs
+  execSyncEcho "some value"
 
-spawnLs :: Effect Unit
+until
+  :: forall emitter psCb jsCb a
+   . emitter
+  -> EventHandle emitter psCb jsCb
+  -> ((a -> Effect Unit) -> psCb)
+  -> Aff a
+until ee event cb = makeAff \done -> do
+  rm <- ee # once event (cb (done <<< Right))
+  pure $ effectCanceler rm
+
+spawnLs :: Aff Unit
 spawnLs = do
-  ls <- spawn "ls" [ "-la" ]
-  ls # on_ exitH \exit ->
-    log $ "ls exited: " <> show exit
-  (stdout ls) # on_ dataH (Buffer.toString UTF8 >=> log)
+  log "\nspawns processes ok"
+  ls <- liftEffect $ spawn "ls" [ "-la" ]
+  liftEffect $ (stdout ls) # on_ dataH (Buffer.toString UTF8 >=> log)
+  exit <- until ls CP.exitH \complete -> \exit -> complete exit
+  log $ "ls exited: " <> show exit
 
-nonExistentExecutable :: Effect Unit -> Effect Unit
-nonExistentExecutable done = do
-  ch <- spawn "this-does-not-exist" []
-  ch # on_ errorH \err ->
-    log (code err) *> done
+nonExistentExecutable :: Aff Unit
+nonExistentExecutable = do
+  log "\nemits an error if executable does not exist"
+  ch <- liftEffect $ spawn "this-does-not-exist" []
+  err <- until ch CP.errorH \complete -> \err -> complete err
+  log (code err)
+  log "nonexistent executable: all good."
 
-execLs :: Effect Unit
+noEffectsTooEarly :: Aff Unit
+noEffectsTooEarly = do
+  log "\ndoesn't perform effects too early"
+  ls <- liftEffect $ spawn "ls" [ "-la" ]
+  let _ = kill ls
+  exit <- until ls CP.exitH \complete -> \exit -> complete exit
+  case exit of
+    Normally 0 ->
+      log "All good!"
+    _ -> do
+      log ("Bad exit: expected `Normally 0`, got: " <> show exit)
+
+killsProcess :: Aff Unit
+killsProcess = do
+  log "\nkills processes"
+  ls <- liftEffect $ spawn "ls" [ "-la" ]
+  _ <- liftEffect $ kill ls
+  exit <- until ls CP.exitH \complete -> \exit -> complete exit
+  case exit of
+    BySignal s | Just SIGTERM <- Signal.fromString =<< (hush $ fromKillSignal s) ->
+      log "All good!"
+    _ -> do
+      log ("Bad exit: expected `BySignal SIGTERM`, got: " <> show exit)
+
+execLs :: Aff Unit
 execLs = do
-  -- returned ChildProcess is ignored here
-  _ <- exec' "ls >&2" identity \r ->
-    log "redirected to stderr:" *> (Buffer.toString UTF8 r.stderr >>= log)
-  pure unit
+  log "\nexec"
+  r <- makeAff \done -> do
+    -- returned ChildProcess is ignored here
+    void $ exec' "ls >&2" identity (done <<< Right)
+    pure nonCanceler
+  log "redirected to stderr:" *> (liftEffect $ Buffer.toString UTF8 r.stderr >>= log)
 
-execSyncEcho :: String -> Effect Unit
-execSyncEcho str = do
+execSyncEcho :: String -> Aff Unit
+execSyncEcho str = liftEffect do
+  log "\nexecSyncEcho"
   buf <- Buffer.fromString str UTF8
   resBuf <- execSync' "cat" (_ { input = Just buf })
   res <- Buffer.toString NE.UTF8 resBuf
