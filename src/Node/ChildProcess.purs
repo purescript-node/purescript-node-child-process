@@ -86,7 +86,7 @@ module Node.ChildProcess
 
 import Prelude
 
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Nullable (Nullable, toMaybe, toNullable)
 import Data.Posix (Pid, Gid, Uid)
 import Data.Posix.Signal (Signal)
@@ -97,12 +97,11 @@ import Effect.Uncurried (EffectFn2)
 import Foreign (Foreign)
 import Foreign.Object (Object)
 import Node.Buffer (Buffer)
-import Node.ChildProcess.Types (Exit(..), Handle, KillSignal, Shell, StdIO, UnsafeChildProcess)
+import Node.ChildProcess.Types (Exit(..), Handle, KillSignal, Shell, StdIO, UnsafeChildProcess, ipc, pipe)
 import Node.Errors.SystemError (SystemError)
 import Node.EventEmitter (EventEmitter, EventHandle)
 import Node.EventEmitter.UtilTypes (EventHandle0, EventHandle1)
 import Node.Stream (Readable, Writable)
-import Node.UnsafeChildProcess.Safe (safeStdio)
 import Node.UnsafeChildProcess.Safe as SafeCP
 import Node.UnsafeChildProcess.Unsafe (unsafeSOBToBuffer)
 import Node.UnsafeChildProcess.Unsafe as UnsafeCP
@@ -288,7 +287,7 @@ spawnSync' command args buildOpts = (UnsafeCP.spawnSync' command args opts) <#> 
   }
   where
   opts =
-    { stdio: maybe safeStdio (\rest -> safeStdio <> rest) o.appendStdio
+    { stdio: [ pipe, pipe, pipe ] <> fromMaybe [] o.appendStdio
     , encoding: "buffer"
     , cwd: fromMaybe undefined o.cwd
     , input: fromMaybe undefined o.input
@@ -328,7 +327,7 @@ spawn
   :: String
   -> Array String
   -> Effect ChildProcess
-spawn cmd args = coerce $ UnsafeCP.spawn' cmd args { stdio: safeStdio }
+spawn cmd args = coerce $ UnsafeCP.spawn cmd args
 
 -- | - `cwd` <string> | <URL> Current working directory of the child process.
 -- | - `env` <Object> Environment key-value pairs. Default: process.env.
@@ -367,7 +366,7 @@ spawn'
 spawn' cmd args buildOpts = coerce $ UnsafeCP.spawn' cmd args opts
   where
   opts =
-    { stdio: maybe safeStdio (\rest -> safeStdio <> rest) o.appendStdio
+    { stdio: [ pipe, pipe, pipe, ipc ] <> fromMaybe [] o.appendStdio
     , cwd: fromMaybe undefined o.cwd
     , env: fromMaybe undefined o.env
     , argv0: fromMaybe undefined o.argv0
@@ -452,7 +451,7 @@ execSync' cmd buildOpts = do
     , windowsHide: Nothing
     }
   opts =
-    { stdio: maybe safeStdio (\rest -> safeStdio <> rest) o.appendStdio
+    { stdio: [ pipe, pipe, pipe ] <> fromMaybe [] o.appendStdio
     , encoding: "buffer"
     , cwd: fromMaybe undefined o.cwd
     , input: fromMaybe undefined o.input
@@ -550,7 +549,7 @@ execFileSync
   -> Array String
   -> Effect Buffer
 execFileSync file args =
-  map unsafeSOBToBuffer $ UnsafeCP.execFileSync' file args { stdio: safeStdio, encoding: "buffer" }
+  map unsafeSOBToBuffer $ UnsafeCP.execFileSync' file args { encoding: "buffer" }
 
 -- | - `cwd` <string> | <URL> Current working directory of the child process.
 -- | - `input` <string> | <Buffer> | <TypedArray> | <DataView> The value which will be passed as stdin to the spawned process. Supplying this value will override stdio[0].
@@ -585,7 +584,7 @@ execFileSync' file args buildOpts =
   map unsafeSOBToBuffer $ UnsafeCP.execFileSync' file args opts
   where
   opts =
-    { stdio: maybe safeStdio (\rest -> safeStdio <> rest) o.appendStdio
+    { stdio: [ pipe, pipe, pipe ] <> fromMaybe [] o.appendStdio
     , encoding: "buffer"
     , cwd: fromMaybe undefined o.cwd
     , input: fromMaybe undefined o.input
@@ -685,7 +684,7 @@ fork
   :: String
   -> Array String
   -> Effect ChildProcess
-fork modulePath args = coerce $ UnsafeCP.fork' modulePath args { stdio: safeStdio }
+fork modulePath args = coerce $ UnsafeCP.fork' modulePath args { stdio: [ pipe, pipe, pipe, ipc ] }
 
 -- | - `cwd` <string> | <URL> Current working directory of the child process.
 -- | - `detached` <boolean> Prepare child to run independently of its parent process. Specific behavior depends on the platform, see options.detached).
@@ -724,7 +723,7 @@ fork'
 fork' modulePath args buildOpts = coerce $ UnsafeCP.fork' modulePath args opts
   where
   opts =
-    { stdio: maybe safeStdio (\rest -> safeStdio <> rest) o.appendStdio
+    { stdio: [ pipe, pipe, pipe, ipc ] <> fromMaybe [] o.appendStdio
     , cwd: fromMaybe undefined o.cwd
     , detached: fromMaybe undefined o.detached
     , env: fromMaybe undefined o.env
