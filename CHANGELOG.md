@@ -12,24 +12,7 @@ Bugfixes:
 
 Other improvements:
 
-## [v12.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v12.0.0) - 2023-07-26
-
-Breaking changes:
-- Removed `safeStdio` (#60 by @JordanMartinez)
-
-  Turns out this isn't safe for `*Sync` functions. AFAIK, this isn't documented
-  in Node docs.
-
-Bugfixes:
-- Fixed `exitH`'s String value for listener (#60 by @JordanMartinez)
-- Added missing FFI for `execSync'` (#60 by @JordanMartinez)
-- Fixed `fromKillSignal`'s FFI's arg order (#60 by @JordanMartinez)
-- Update `node-streams` to `v9.0.0` to fix FFI issues (#61 by @JordanMartinez)
-
-Other improvements:
-- Update tests to actually throw if invalid state occurs (#60 by @JordanMartinez)
-
-## [v11.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v11.0.0) - 2023-07-25
+## [v11.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v11.0.0) - 2023-07-26
 
 Breaking changes:
 - Update the signal arg from `String` to `KillSignal` (#51, #52 by @JordanMartinez)
@@ -38,17 +21,27 @@ Breaking changes:
   - `exitH`/`closeH`'s signal arg
   - `spawnSync`'s `SpawnResult`'s `signal` field
   - `kill'`'s signal arg
+- Removed `safeStdio` (#60 by @JordanMartinez)
+
+  Turns out this isn't safe for `*Sync` functions. AFAIK, this isn't documented
+  in Node docs.
 
 New features:
-- Added `fromKillSignal`, `fromKillSignal'` (#51, #59 by @JordanMartinez)
+- Added `fromKillSignal`, `fromKillSignal'` (#51, #59, #60 by @JordanMartinez)
 - Added `pidExists` (#53 by @JordanMartinez)
 - Export `toUnsafeChildProcess` (#55 by @JordanMartinez)
 - Added `stdio` (#55 by @JordanMartinez)
 - Added `Eq` and `Show` instance to `Shell` & `KillSignal` (#58, #59 by @JordanMartinez)
 
+Bugfixes:
+- Fixed `exitH`'s String value for listener (#60 by @JordanMartinez)
+- Added missing FFI for `execSync'` (#60 by @JordanMartinez)
+- Update `node-streams` to `v9.0.0` to fix FFI issues (#61 by @JordanMartinez)
+
 Other improvements:
 - Fix regression: add `ref`/`unref` APIs that were dropped in `v10.0.0` (#50 by @JordanMartinez)
 - Wrap `Unsafe` API via `ChildProcess` in safer way (#54 by @JordanMartinez)
+- Update tests to actually throw if invalid state occurs (#60 by @JordanMartinez)
 
 ## [v10.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v10.0.0) - 2023-07-20
 
