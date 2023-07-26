@@ -15,6 +15,7 @@ module Node.ChildProcess.Types
   , intSignal
   , stringSignal
   , fromKillSignal
+  , fromKillSignal'
   , Shell
   , enableShell
   , customShell
@@ -72,6 +73,17 @@ defaultStdIO = unsafeCoerce (null :: Nullable String)
 
 foreign import data KillSignal :: Type
 
+instance Eq KillSignal where
+  eq a b = a # fromKillSignal'
+    ( \i -> b # fromKillSignal'
+        (\b' -> i == b')
+        (const false)
+    )
+    ( \s -> b # fromKillSignal'
+        (const false)
+        (\b' -> s == b')
+    )
+
 instance Show KillSignal where
   show = showKillSignal
 
@@ -84,9 +96,12 @@ stringSignal :: String -> KillSignal
 stringSignal = unsafeCoerce
 
 fromKillSignal :: KillSignal -> Either Int String
-fromKillSignal sig = runFn3 fromKillSignalImpl Left Right sig
+fromKillSignal sig = fromKillSignal' Left Right sig
 
-foreign import fromKillSignalImpl :: Fn3 (forall l r. l -> Either l r) (forall l r. r -> Either l r) (KillSignal) (Either Int String)
+fromKillSignal' :: forall r. (Int -> r) -> (String -> r) -> KillSignal -> r
+fromKillSignal' fromInt fromStr sig = runFn3 fromKillSignalImpl fromInt fromStr sig
+
+foreign import fromKillSignalImpl :: forall r. Fn3 (Int -> r) (String -> r) (KillSignal) r
 
 foreign import data Shell :: Type
 

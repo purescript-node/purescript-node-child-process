@@ -23,11 +23,11 @@ Breaking changes:
   - `kill'`'s signal arg
 
 New features:
-- Added `fromKillSignal` (#51 by @JordanMartinez)
+- Added `fromKillSignal`, `fromKillSignal'` (#51, #59 by @JordanMartinez)
 - Added `pidExists` (#53 by @JordanMartinez)
 - Export `toUnsafeChildProcess` (#55 by @JordanMartinez)
 - Added `stdio` (#55 by @JordanMartinez)
-- Added `Show` instance to `Shell` & `KillSignal` (#58 by @JordanMartinez)
+- Added `Eq` and `Show` instance to `Shell` & `KillSignal` (#58, #59 by @JordanMartinez)
 
 Other improvements:
 - Fix regression: add `ref`/`unref` APIs that were dropped in `v10.0.0` (#50 by @JordanMartinez)
