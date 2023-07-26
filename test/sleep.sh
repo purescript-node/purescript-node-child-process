@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-sleep 2000
+sleep 2
 echo "$1"
 
 echo "Done"

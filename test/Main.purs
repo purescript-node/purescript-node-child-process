@@ -46,11 +46,15 @@ until ee event cb = makeAff \done -> do
 writingToStdinWorks :: Aff Unit
 writingToStdinWorks = do
   log "\nwriting to stdin works"
-  sp <- liftEffect $ spawn "sh" [ "./sleep.sh" ]
+  sp <- liftEffect $ spawn "sh" [ "./test/sleep.sh" ]
   liftEffect do
+    (stdin sp) # once_ Stream.errorH \err -> do
+      log "Error in stdin"
+      throwException $ unsafeCoerce err
     buf <- Buffer.fromString "helllo" UTF8
     void $ Stream.write (stdin sp) buf
-    sp # once_ CP.errorH \err ->
+    sp # once_ CP.errorH \err -> do
+      log "Error in child process"
       throwException $ unsafeCoerce err
   exit <- until sp CP.closeH \completeAff -> \exit ->
     completeAff exit
