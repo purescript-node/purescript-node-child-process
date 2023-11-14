@@ -12,6 +12,14 @@ Bugfixes:
 
 Other improvements:
 
+## [v11.1.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v11.1.0) - 2023-11-14
+
+New Features:
+- Added `waitSpawned'` which works on UnsafeChildProcess (#62 by @JordanMartinez)
+
+Other improvements:
+- Noted `pipe`/`inherit` stdio issues with `stdin` (#62 by @JordanMartinez)
+
 ## [v11.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v11.0.0) - 2023-07-26
 
 Breaking changes:
