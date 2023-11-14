@@ -26,7 +26,7 @@ module Node.ChildProcess.Types
 import Prelude
 
 import Data.Either (Either(..), either)
-import Data.Function.Uncurried (Fn2, Fn3, runFn2, runFn3)
+import Data.Function.Uncurried (Fn3, runFn3)
 import Data.Nullable (Nullable, null)
 import Node.FS (FileDescriptor)
 import Node.Stream (Stream)
