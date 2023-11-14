@@ -44,6 +44,17 @@ foreign import data Handle :: Type
 -- | See https://nodejs.org/docs/latest-v18.x/api/child_process.html#optionsstdio
 foreign import data StdIO :: Type
 
+-- | When used for X, then Y will exist on the child process where X and Y are
+-- | - `stdio[0]` - `stdin`
+-- | - `stdio[1]` - `stdout`
+-- | - `stdio[2]` - `stderr`
+-- |
+-- | Note: when used with `stdin`, piping the parent stdin to this stream
+-- | will not cause the child process to terminate when that parent stdin stream
+-- | ends via `Ctrl+D` user input. Rather, the child process will hang
+-- | until the parent process calls `Stream.end` on the child process' 
+-- | `stdin` stream. Since it's impossible to know when the user
+-- | inputs `Ctrl+D`, `inherit` should be used instead.
 pipe :: StdIO
 pipe = unsafeCoerce "pipe"
 
@@ -56,6 +67,15 @@ overlapped = unsafeCoerce "overlapped"
 ipc :: StdIO
 ipc = unsafeCoerce "ipc"
 
+-- | Uses the parent's corresponding stream.
+-- |
+-- | Note: this value must be used for `stdin` if one
+-- | wants to pipe the parent's `stdin` into the child process' `stdin`
+-- | AND cause the child process to terminate when the user closes
+-- | the parent's `stdin` via `Ctrl+D`. Using `pipe` instead
+-- | will cause the child process to hang, even when `Ctrl+D` is pressed,
+-- | until the parent process calls `Stream.end`, which cannot be reliably
+-- | called the moment AFTER `Ctrl+D` is pressed.
 inherit :: StdIO
 inherit = unsafeCoerce "inherit"
 
