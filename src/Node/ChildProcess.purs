@@ -21,7 +21,7 @@
 -- | defined in this library that doesn't exist in the Node docs.
 -- | It exists to allow the end-user to append additional values to the `safeStdio` value
 -- | used here. For example,
--- | 
+-- |
 -- | ```
 -- | spawn' file args (_ { appendStdio = Just [ fileDescriptor8, pipe, pipe ]})
 -- | ```
@@ -242,7 +242,7 @@ spawnSync command args = (UnsafeCP.spawnSync command args) <#> \r ->
   }
 
 -- | - `cwd` <string> | <URL> Current working directory of the child process.
--- | - `input` <string> | <Buffer> | <TypedArray> | <DataView> The value which will be passed as stdin to the spawned process. Supplying this value will override stdio[0].
+-- | - `input` <Buffer> The value which will be passed as stdin to the spawned process. Supplying this value will override stdio[0].
 -- | - `argv0` <string> Explicitly set the value of argv[0] sent to the child process. This will be set to command if not specified.
 -- | - `env` <Object> Environment key-value pairs. Default: process.env.
 -- | - `uid` <number> Sets the user identity of the process (see setuid(2)).
