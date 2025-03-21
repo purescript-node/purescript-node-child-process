@@ -10,6 +10,8 @@ New features:
 
 Bugfixes:
 
+- Account for child creation to possibly fail with system error (#66 by @Hi-Angel)
+
 Other improvements:
 
 ## [v11.1.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v11.1.0) - 2023-11-14
@@ -76,7 +78,7 @@ Breaking changes:
   - Moved from `Node.ChildProces` to `Node.ChildProces.Types`
   - Changed the `BySignal`'s constructor's arg type from `Signal` to `String`
 - Breaking changes made to the `Handle` type (#46 by @JordanMartinez)
-  
+
   - Moved from `Node.ChildProces` to `Node.ChildProces.Types`
 - Converted `defaultOptions { override = Just 1}` pattern to `(_ { override = Just 1})`  (#46 by @JordanMartinez)
 

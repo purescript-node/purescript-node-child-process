@@ -52,7 +52,7 @@ foreign import data StdIO :: Type
 -- | Note: when used with `stdin`, piping the parent stdin to this stream
 -- | will not cause the child process to terminate when that parent stdin stream
 -- | ends via `Ctrl+D` user input. Rather, the child process will hang
--- | until the parent process calls `Stream.end` on the child process' 
+-- | until the parent process calls `Stream.end` on the child process'
 -- | `stdin` stream. Since it's impossible to know when the user
 -- | inputs `Ctrl+D`, `inherit` should be used instead.
 pipe :: StdIO
@@ -140,12 +140,14 @@ customShell = unsafeCoerce
 -- | what options were used.
 foreign import data StringOrBuffer :: Type
 
--- | Specifies how a child process exited; normally (with an exit code), or
--- | due to a signal.
+-- | Specifies how a child process exited; normally (with an exit code), due to
+-- | a signal or if it failed to even launch (e.g. if a command doesn't exist).
 data Exit
   = Normally Int
   | BySignal KillSignal
+  | BySysError
 
 instance showExit :: Show Exit where
   show (Normally x) = "Normally " <> show x
   show (BySignal sig) = "BySignal " <> (either show show $ fromKillSignal sig)
+  show BySysError = "BySysError"
