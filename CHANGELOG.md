@@ -10,9 +10,15 @@ New features:
 
 Bugfixes:
 
-- Account for child creation to possibly fail with system error (#66 by @Hi-Angel)
+Other improvements:
+
+## [v12.0.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v12.0.0) - 2025-03-22
+
+Breaking changes:
+- Account for child creation to possibly fail with system error `BySysError` (#66 by @Hi-Angel)
 
 Other improvements:
+- Changed `SpawnSyncOptions` docs to remove mention of input types other than `Buffer`, as that is all the PureScript API supports (#64 by @Hi-Angel)
 
 ## [v11.1.0](https://github.com/purescript-node/purescript-node-child-process/releases/tag/v11.1.0) - 2023-11-14
 
