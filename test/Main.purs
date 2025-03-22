@@ -72,6 +72,7 @@ spawnLs = do
     Normally 0 -> log $ "ls exited with 0"
     Normally i -> liftEffect $ throw $ "ls had non-zero exit: " <> show i
     BySignal sig -> liftEffect $ throw $ "ls exited with sig: " <> show sig
+    BySysError -> liftEffect $ throw "ls exited with system error"
 
 nonExistentExecutable :: Aff Unit
 nonExistentExecutable = do

@@ -21,7 +21,7 @@
 -- | defined in this library that doesn't exist in the Node docs.
 -- | It exists to allow the end-user to append additional values to the `safeStdio` value
 -- | used here. For example,
--- | 
+-- |
 -- | ```
 -- | spawn' file args (_ { appendStdio = Just [ fileDescriptor8, pipe, pipe ]})
 -- | ```
@@ -86,7 +86,7 @@ module Node.ChildProcess
 
 import Prelude
 
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Nullable (Nullable, toMaybe, toNullable)
 import Data.Posix (Pid, Gid, Uid)
 import Data.Posix.Signal (Signal)
@@ -237,7 +237,11 @@ spawnSync command args = (UnsafeCP.spawnSync command args) <#> \r ->
   , exitStatus: case toMaybe r.status, toMaybe r.signal of
       Just c, _ -> Normally c
       _, Just s -> BySignal s
-      _, _ -> unsafeCrashWith $ "Impossible: `spawnSync` child process neither exited nor was killed."
+      _, _ ->
+        if isJust $ toMaybe r.error then
+          BySysError
+        else
+          unsafeCrashWith $ "Impossible: `spawnSync` child process neither exited nor was killed."
   , error: toMaybe r.error
   }
 
@@ -282,7 +286,11 @@ spawnSync' command args buildOpts = (UnsafeCP.spawnSync' command args opts) <#> 
   , exitStatus: case toMaybe r.status, toMaybe r.signal of
       Just c, _ -> Normally c
       _, Just s -> BySignal s
-      _, _ -> unsafeCrashWith $ "Impossible: `spawnSync` child process neither exited nor was killed."
+      _, _ ->
+        if isJust $ toMaybe r.error then
+          BySysError
+        else
+          unsafeCrashWith $ "Impossible: `spawnSync` child process neither exited nor was killed."
   , error: toMaybe r.error
   }
   where
