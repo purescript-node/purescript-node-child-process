@@ -14,7 +14,6 @@ jobs:
 
       - uses: purescript-contrib/setup-purescript@main
         with:
-          purescript: "unstable"
           purs-tidy: "latest"
 
       - uses: actions/setup-node@v3
@@ -22,18 +21,13 @@ jobs:
           node-version: "lts/*"
 
       - name: Install dependencies
-        run: |
-          npm install -g bower
-          npm install
-          bower install --production
+        run: npm ci
 
       - name: Build source
         run: npm run-script build
 
       - name: Run tests
-        run: |
-          bower install
-          npm run-script test --if-present
+        run: npm test
 
       - name: Check formatting
         run: |
