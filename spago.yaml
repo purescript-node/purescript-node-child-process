@@ -1,7 +1,7 @@
 package:
   name: node-child-process
   dependencies:
-    - aff: ">=7.0.0 <8.0.0"
+    - aff: ">=7.0.0 <9.0.0"
     - datetime: ">=6.1.0 <7.0.0"
     - effect: ">=4.0.0 <5.0.0"
     - either: ">=6.1.0 <7.0.0"
@@ -36,5 +36,3 @@ package:
 workspace:
   packageSet:
     registry: 81.4.0
-  extraPackages:
-    aff: 7.1.0

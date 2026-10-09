@@ -6,7 +6,7 @@
         "core": {
           "dependencies": [
             {
-              "aff": ">=7.0.0 <8.0.0"
+              "aff": ">=7.0.0 <9.0.0"
             },
             {
               "datetime": ">=6.1.0 <7.0.0"
@@ -741,15 +741,13 @@
         "zipperarray": "2.0.0"
       }
     },
-    "extra_packages": {
-      "aff": "7.1.0"
-    }
+    "extra_packages": {}
   },
   "packages": {
     "aff": {
       "type": "registry",
-      "version": "7.1.0",
-      "integrity": "sha256-/nOpDQVnKIoP1pQ1ZZBYpadK0TuMlG4WwufGzJpsfD0=",
+      "version": "8.0.0",
+      "integrity": "sha256-9BRIrSdRoYybfiUmBqgKJ66cPqxYHb277bVWQMn/9sg=",
       "dependencies": [
         "control",
         "datetime",
