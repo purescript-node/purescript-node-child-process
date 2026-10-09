@@ -1,4 +1,4 @@
-export { 
+export {
   exec as execImpl,
   exec as execOptsImpl,
   exec as execCbImpl,
@@ -7,8 +7,8 @@ export {
   execFile as execFileOptsImpl,
   execFile as execFileCbImpl,
   execFile as execFileOptsCbImpl,
-  spawn as spawnImpl, 
-  spawn as spawnOptsImpl, 
+  spawn as spawnImpl,
+  spawn as spawnOptsImpl,
   execSync as execSyncImpl,
   execSync as execSyncOptsImpl,
   execFileSync as execFileSyncImpl,
